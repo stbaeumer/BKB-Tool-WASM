@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Open in Browser (Container)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/bin/Debug/net10.0/BKBToolClient.dll",
+      "preLaunchTask": "run-dev-server",
+      "console": "integratedTerminal",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true
+      }
+    },
+    {
+      "name": "Attach Debugger",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "preLaunchTask": "run-dev-server"
+    }
+  ]
+}

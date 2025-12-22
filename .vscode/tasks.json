@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "${workspaceFolder}/BKBToolClient.csproj"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run-dev-server",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "watch",
+        "--",
+        "dotnet",
+        "run",
+        "--configuration",
+        "Debug"
+      ],
+      "isBackground": true,
+      "runOptions": {
+        "instanceLimit": 1
+      },
+      "problemMatcher": {
+        // Minimal pattern (not used for diagnostics, nur für Background-State)
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          // dotnet watch signalisiert Start z.B. mit "watch : Started"
+          "beginsPattern": ".*watch.*Started.*|.*Hot reload enabled.*",
+          // Alternative Ready-Marker der WasmAppHost-Ausgabe
+          "endsPattern": ".*Now listening on:.*|.*Application started\\.|.*App url:.*|.*Debug at url:.*"
+        }
+      },
+      "presentation": {
+        "reveal": "silent"
+      }
+    }
+  ]
+}

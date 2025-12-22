@@ -1,0 +1,50 @@
+name: Deploy to Webspace (SFTP)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+
+      - name: Restore
+        run: dotnet restore BKBToolClient.csproj
+
+      - name: Publish Release
+        run: dotnet publish BKBToolClient.csproj -c Release -o dist
+
+      - name: List publish output
+        run: |
+          echo "Contents of dist/"
+          ls -la dist || true
+          echo "Contents of dist/wwwroot/"
+          ls -la dist/wwwroot || true
+
+      - name: Deploy via SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: sftp
+          port: ${{ secrets.SFTP_PORT }}
+          server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
+          local-dir: dist/wwwroot
+          log-level: standard
+          # Optional: leert das Zielverzeichnis vor Deploy – vorsichtig verwenden!
+          dangerous-clean-slate: false

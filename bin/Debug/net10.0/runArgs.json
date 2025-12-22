@@ -1,1 +1,1 @@
-{"applicationArguments":[],"runtimeArguments":[],"environmentVariables":{}}
+{"applicationArguments":["dotnet","run","--configuration","Debug"],"runtimeArguments":[],"environmentVariables":{}}
