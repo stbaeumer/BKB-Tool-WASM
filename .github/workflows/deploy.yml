@@ -35,16 +35,19 @@ jobs:
           echo "Contents of dist/wwwroot/"
           ls -la dist/wwwroot || true
 
-      - name: Deploy via SFTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
-        with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          protocol: sftp
-          port: ${{ secrets.SFTP_PORT }}
-          server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
-          local-dir: dist/wwwroot
-          log-level: standard
-          # Optional: leert das Zielverzeichnis vor Deploy – vorsichtig verwenden!
-          dangerous-clean-slate: false
+      - name: Deploy via SFTP with lftp
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_REMOTE_PATH: ${{ secrets.SFTP_REMOTE_PATH }}
+        run: |
+          apt-get update && apt-get install -y lftp
+          lftp -e "
+          set sftp:auto-confirm yes
+          open sftp://${SFTP_USER}:${SFTP_PASSWORD}@${SFTP_HOST}:${SFTP_PORT}
+          cd ${SFTP_REMOTE_PATH}
+          mirror -R --delete dist/wwwroot ./
+          quit
+          "
