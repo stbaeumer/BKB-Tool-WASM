@@ -1,0 +1,34 @@
+﻿@namespace BKBToolClient
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
+@using BKBToolClient.Shared
+@inject IJSRuntime JS
+
+<Router AppAssembly="@typeof(App).Assembly">
+  <Found Context="routeData">
+    <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+  </Found>
+  <NotFound>
+    <LayoutView Layout="@typeof(MainLayout)">
+      <p>Seite nicht gefunden.</p>
+    </LayoutView>
+  </NotFound>
+</Router>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Nach dem ersten Render Blazor: Startup‑Anzeige ausblenden
+                await JS.InvokeVoidAsync("hideStartupProgress");
+            }
+            catch
+            {
+                // still ignore — kein Blocking
+            }
+        }
+    }
+}

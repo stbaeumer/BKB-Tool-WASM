@@ -1,0 +1,32 @@
+@inherits LayoutComponentBase
+@using BKBToolClient.Services
+@inject NavigationManager Nav
+@inject FileProcessingService ProcessingService
+
+<div class="page">
+    <header class="app-header">
+        <div class="container py-3 text-center">
+            <h1 class="m-0">
+                <a href="/" class="text-reset text-decoration-none" @onclick="OnHeaderClicked" @onclick:preventDefault="true">BKB-Tool</a>
+            </h1>
+            <div class="subtitle">Ein Tool an der Schnittstelle zwischen SchILD und (Web-)Untis</div>
+        </div>
+
+@code {
+    private async Task OnHeaderClicked()
+    {
+        // Notify subscribers and clear stored bytes first, then navigate.
+        try { await ProcessingService.RequestReturnToStartAsync(); } catch { }
+        try { Nav.NavigateTo("/"); } catch { }
+    }
+}
+    </header>
+    <main>
+        @Body
+    </main>
+    <footer class="footer">
+        <p>
+            &copy; 2025 <a href="mailto:stefan.baeumer@berufskolleg-borken.de">Stefan B&auml;umer</a>
+        </p>
+    </footer>
+</div>

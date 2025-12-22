@@ -1,0 +1,1197 @@
+@using BKBToolClient.Models
+@using BKBToolClient.Services
+@using System.IO
+@using System.Linq
+@inject FileProcessingService ProcessingService
+@inject FunctionConfigService ConfigService
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">@Config.Name
+            @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
+            {
+                <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleFunctionHint" title="Informationen zur Funktion" aria-expanded="@_showFunctionHint" aria-controls="@("functionHint-" + Config.Id)">
+                    <i class="bi bi-info-circle text-muted" style="font-size:1rem;"></i>
+                </button>
+            }
+            @* summary shown below file list; moved further down so it's directly above the "Dateien erstellen" button *@
+
+
+
+            @if (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co")
+            {
+                <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleTestFiles" title="Testen Sie die Funktion mit diesen Testdateien" aria-pressed="@_showTestFiles" aria-label="Testdateien anzeigen">
+                    <i class="bi bi-bug text-muted" style="font-size:1rem;"></i>
+                </button>
+            }
+        </h4>
+        <button class="btn btn-sm btn-secondary" @onclick="HandleBackClicked">← Zurück</button>
+    </div>
+
+@code {
+    private async Task DownloadAllOutputs()
+    {
+        try
+        {
+            if (_result == null || _result.OutputFiles == null || !_result.OutputFiles.Any()) return;
+            foreach (var of in _result.OutputFiles)
+            {
+                if (of?.Content == null) continue;
+                var base64 = Convert.ToBase64String(of.Content);
+                await JS.InvokeVoidAsync("downloadFile", of.FileName, base64);
+            }
+        }
+        catch { }
+    }
+}
+    <div class="card-body">
+        @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
+        {
+            <div id="@($"functionHint-{Config.Id}")" role="region" class="collapsible-info @(_showFunctionHint ? "open" : "") mt-3">
+                <div class="alert alert-primary text-white" style="white-space: pre-line;">@Config.FunctionHint</div>
+            </div>
+        }
+        @if (!_isProcessing && _result == null && string.IsNullOrWhiteSpace(_previewHtml))
+        {
+            <h5>1. Dateien hochladen</h5>
+
+            <div id="dropzone-@Config.Id" class="dropzone-area mb-3" @ref="_dropzoneRef">
+                <div class="dropzone-instructions">Dateien hierher ziehen oder klicken, um auszuwählen</div>
+            </div>
+
+            @foreach (var file in Config.RequiredFiles.Concat(Config.OptionalFiles))
+            {
+                var localFile = file; // wichtig: lokale Variable pro Iteration
+                var fileClass = localFile.IsRequired ? "required-file" : localFile.IsOptional ? "optional-file" : "optional-file";
+                <div class="mb-3">
+                    <label class="form-label d-flex align-items-center @fileClass" @onclick="() => { if (!string.IsNullOrEmpty(localFile.SourceHint)) ToggleSourceHint(localFile.FileKey); }" title="@((!string.IsNullOrEmpty(localFile.SourceHint)) ? "Hinweise zu dieser Datei anzeigen" : "")" style="@((!string.IsNullOrEmpty(localFile.SourceHint)) ? "cursor:pointer;" : null)">
+                        <div class="me-2">
+                            @{
+                                // Prefer showing a concrete example filename if available.
+                                var displayName = !string.IsNullOrWhiteSpace(localFile.ExampleFileName)
+                                    ? localFile.ExampleFileName
+                                    : (localFile.AllowedExtensions != null && localFile.AllowedExtensions.Length == 1
+                                        ? localFile.Name + localFile.AllowedExtensions[0]
+                                        : localFile.Name);
+                            }
+                            @displayName
+                            @if (localFile.IsOptional)
+                            {
+                                <span class="badge bg-secondary ms-2">Optional</span>
+                            }
+                            @* If there are multiple allowed extensions, show them as a hint; otherwise omit the verbose label. *@
+                            @if (localFile.AllowedExtensions != null && localFile.AllowedExtensions.Length > 1)
+                            {
+                                <small class="text-muted ms-2">Erlaubte Formate: @string.Join(", ", localFile.AllowedExtensions)</small>
+                            }
+                        </div>
+
+                        <div class="ms-auto d-flex align-items-center">
+                            @if (localFile.IsUploaded)
+                            {
+                                <span class="badge bg-success me-2">✓</span>
+                                <small class="text-muted d-none d-md-inline">@localFile.FileName</small>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger me-2">✗</span>
+                            }
+
+                            @* Hinweise werden jetzt beim Anklicken der ganzen Zeile angezeigt; separater Info‑Button entfernt. *@
+                        </div>
+                    </label>
+
+                    @if (!string.IsNullOrEmpty(localFile.SourceHint) && _visibleSourceHints.Contains(localFile.FileKey))
+                    {
+                        <div class="alert alert-info mt-2" style="white-space: pre-line; font-size: 0.9em;">@localFile.SourceHint</div>
+                    }
+
+                    @if (localFile.IsUploaded)
+                    {
+                        <div class="small text-success mt-1">
+                            @($"Erfolgreich hochgeladen: {localFile.LineCount} Zeilen, {localFile.ColumnCount} Spalten{(string.IsNullOrWhiteSpace(localFile.LastModifiedDisplay) ? "" : ", " + localFile.LastModifiedDisplay)}")
+                        </div>
+                    }
+
+                    @if (_validationErrors.ContainsKey($"file_{localFile.FileKey}"))
+                    {
+                        <div class="invalid-feedback d-block">
+                            ❌ @_validationErrors[$"file_{localFile.FileKey}"]
+                        </div>
+                    }
+                </div>
+            }
+
+            @if ((Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co") && _showTestFiles)
+            {
+                <div class="mb-3 mt-2">
+                    <div class="card card-body mt-2 testfiles-panel">
+                        <div class="mb-2">Mit folgenden Beispieldateien können Sie BKB-Tool testen.</div>
+
+                        @if (_loadingTestFiles)
+                        {
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <div class="text-muted">Testdateien werden geladen…</div>
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_testFilesError))
+                        {
+                            <div class="alert alert-danger mb-0">
+                                <strong>Fehler beim Laden der Testdateien:</strong>
+                                <div class="small">@_testFilesError</div>
+                            </div>
+                        }
+                        else if (_testFiles == null || !_testFiles.Any())
+                        {
+                            <div class="text-muted">Keine Testdateien gefunden.</div>
+                        }
+                        else
+                        {
+                            <div class="mb-2 d-flex justify-content-end">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="DownloadAllTestFiles">⬇️ Alle herunterladen</button>
+                            </div>
+                            <ul class="list-group mb-0">
+                                @foreach (var tf in _testFiles)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                                        <div class="ms-2 me-auto">
+                                            <div class="fw-bold">@tf.Name</div>
+                                            <div class="small text-muted">@tf.SizeDisplay @((!string.IsNullOrWhiteSpace(tf.SizeDisplay) && !string.IsNullOrWhiteSpace(tf.LastModifiedDisplay)) ? "•" : "") @tf.LastModifiedDisplay</div>
+                                        </div>
+                                        <div>
+                                            <a class="btn btn-sm btn-outline-secondary me-2" href="@tf.Url" download>🡇</a>
+                                            <a class="btn btn-sm btn-link" target="_blank" href="@tf.Url">↗</a>
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* summary directly above the Dateien erstellen button *@
+            @if (!Config.InputFields.Any() && AllRequiredFilesUploaded())
+            {
+                <div class="mt-2">
+                    @if (!string.IsNullOrEmpty(_studentsSummaryError))
+                    {
+                        <div class="alert alert-danger small">Fehler beim Erstellen der Zusammenfassung: @_studentsSummaryError</div>
+                    }
+                    else if (_statusCounts != null && _statusCounts.Any())
+                    {
+                        <div class="alert alert-success small">Schüler insgesamt: @_builtStudentsCount, davon @_statusSummary</div>
+                    }
+                </div>
+
+                <div class="mt-4 d-flex gap-2 align-items-center">
+                    <button class="btn btn-primary btn-lg" @onclick="ProcessFiles" disabled="@_isProcessing">Dateien erstellen</button>
+                    @if (_isProcessing)
+                    {
+                        <div class="text-muted small mt-2">Verarbeitung läuft…</div>
+                    }
+                </div>
+            }
+            @if (Config.InputFields.Any() && AllRequiredFilesUploaded())
+            {
+                <h5 class="mt-4">2. Einstellungen</h5>
+                @foreach (var field in Config.InputFields)
+                {
+                    <div class="mb-3">
+                        <label class="form-label">
+                            @field.Label
+                            @if (!field.IsRequired)
+                            {
+                                <span class="badge bg-secondary ms-1">Optional</span>
+                            }
+                        </label>
+                        @if (!string.IsNullOrEmpty(field.Placeholder))
+                        {
+                            <small class="text-muted d-block mb-1">
+                                💡 Hinweis: @field.Placeholder
+                            </small>
+                        }
+                        <input type="text" 
+                               class="@GetFieldValidationClass(field)"
+                               placeholder="@field.Placeholder"
+                               @bind="field.Value" 
+                               @bind:event="oninput"
+                               @onblur="() => ValidateField(field)" />
+                        @if (_validationErrors.ContainsKey(field.Key))
+                        {
+                            <div class="invalid-feedback d-block">
+                                ❌ @_validationErrors[field.Key]
+                            </div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(field.Value) && field.IsRequired)
+                        {
+                            <div class="valid-feedback d-block">
+                                ✓ Eingabe gültig
+                            </div>
+                        }
+                        else if (field.IsRequired && string.IsNullOrWhiteSpace(field.Value))
+                        {
+                            <div class="text-muted small">
+                                ⚠️ Dieses Feld ist erforderlich
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="mt-4 d-flex gap-2 align-items-center">
+                    <button class="btn btn-outline-primary" @onclick="PreviewMailaddresses" disabled="@(!CanProcess())">Vorschau anzeigen</button>
+                    <div class="form-check ms-3">
+                        <input class="form-check-input" type="checkbox" id="onlyChangedCheck" @bind="OnlyChanged" />
+                        <label class="form-check-label" for="onlyChangedCheck">Nur neue und veränderte Zeilen ausgeben</label>
+                    </div>
+                    <button class="btn btn-primary btn-lg" @onclick="ApplyMailaddresses" disabled="@(!CanProcess())">@Config.SubmitButtonLabel</button>
+                    @if (!CanProcess())
+                    {
+                        <div class="text-muted small mt-2">
+                            @{ 
+                                if (!AllRequiredFilesUploaded())
+                                {
+                                    <text><span>⚠️ Bitte laden Sie alle benötigten Dateien hoch</span></text>
+                                }
+                                else if (!AllRequiredFieldsFilled())
+                                {
+                                    <text><span>⚠️ Bitte füllen Sie alle Pflichtfelder aus</span></text>
+                                }
+                                else if (_validationErrors.ContainsKey("file_linecount_mismatch"))
+                                {
+                                    <text><div class="text-danger">⚠️ @(_validationErrors["file_linecount_mismatch"])</div></text>
+                                }
+                                else if (_validationErrors.Any())
+                                {
+                                    <text><span>⚠️ Bitte korrigieren Sie die markierten Fehler</span></text>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (!_isProcessing && _result == null && !string.IsNullOrWhiteSpace(_previewHtml))
+        {
+            <h5>Vorschau</h5>
+            <div class="mb-3">
+                <div class="card p-3">
+                    @((MarkupString)_previewHtml)
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" @onclick="ApplyMailaddresses">Weiter: Änderungen anwenden</button>
+                <button class="btn btn-outline-secondary" @onclick="CancelPreview">Abbrechen</button>
+            </div>
+        }
+        else if (_isProcessing)
+        {
+            <div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
+                <div class="mb-4 text-center">
+                    <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                        <span class="visually-hidden">Verarbeitung läuft...</span>
+                    </div>
+                </div>
+                <h5 class="text-center">Dateien werden verarbeitet...</h5>
+                
+                @if (Config.ProcessingSteps.Any())
+                {
+                    <div class="mt-4 text-start" style="max-width: 500px; margin: 0 auto;">
+                        @for (int i = 0; i < Config.ProcessingSteps.Count; i++)
+                        {
+                            var step = Config.ProcessingSteps[i];
+                            var isCurrentStep = i == _currentProcessingStep;
+                            var isCompletedStep = i < _currentProcessingStep;
+                            
+
+                            <div class="d-flex align-items-center mb-2 @(isCurrentStep ? "text-primary fw-bold" : isCompletedStep ? "text-success" : "text-muted")">
+                                @if (isCompletedStep)
+                                {
+                                    <span class="me-2">✓</span>
+                                }
+                                else if (isCurrentStep)
+                                {
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                }
+                                else
+                                {
+                                    <span class="me-2">○</span>
+                                }
+                                <span>@step.Description</span>
+                            </div>
+                        }
+                    </div>
+                }
+                
+                <div class="progress mt-4" style="height: 30px; width: 60%; max-width: 500px; margin: 0 auto;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: @(_progressPercent)%"
+                         aria-valuenow="@_progressPercent" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        @_progressPercent%
+                    </div>
+                </div>
+                <small class="text-muted mt-2 d-block">@_progressMessage</small>
+            </div>
+        }
+        else if (_result != null)
+        {
+            <div class="alert @(_result.Success ? "alert-success" : "alert-danger") d-flex align-items-center">
+                <span class="me-2">@(_result.Success ? "✓" : "✗")</span>
+                <div>
+                    @if (!string.IsNullOrWhiteSpace(_result.MessageHtml))
+                    {
+                        <div>@((MarkupString)_result.MessageHtml)</div>
+                    }
+                    else
+                    {
+                        <div>@_result.Message</div>
+                    }
+                </div>
+            </div>
+
+            @if (_result.Success && _result.OutputFiles.Any())
+            {
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">📥 Download-Dateien:</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="DownloadAllOutputs">⬇️ Alle herunterladen</button>
+                    </div>
+                </div>
+                @foreach (var output in _result.OutputFiles)
+                {
+                    <div class="card mb-3 border-success">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>📄 @output.FileName</strong>
+                                    @if (!string.IsNullOrEmpty(output.Hint))
+                                    {
+                                        <br /><small class="text-muted">@output.Hint</small>
+                                    }
+                                </div>
+                                <button class="btn btn-success" @onclick="() => DownloadFile(output)">
+                                    ⬇️ Download
+                                </button>
+                            </div>
+                            @if (!string.IsNullOrEmpty(output.ProcessingHint))
+                            {
+                                <details class="mt-2">
+                                    <summary class="text-muted" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
+                                    <div class="alert alert-info mt-2" style="white-space: pre-line; font-size: 0.9em;">@output.ProcessingHint</div>
+                                </details>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+
+            <div class="d-flex gap-2 mt-4">
+                <button class="btn btn-secondary" @onclick="Reset">🔄 Neue Verarbeitung</button>
+                <button class="btn btn-outline-secondary" @onclick="HandleBackClicked">← Zurück zur Übersicht</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public FunctionConfig Config { get; set; } = null!;
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private async Task HandleBackClicked()
+    {
+        // ensure UI state and stored bytes are cleared
+        try
+        {
+            Reset();
+        }
+        catch { }
+
+        // notify parent via the callback so it can navigate/clear selection
+        if (OnBack.HasDelegate)
+        {
+            await OnBack.InvokeAsync(null);
+        }
+        else
+        {
+            // fallback: force navigation to root (full reload to reset any in-memory state)
+            try { Nav.NavigateTo("/", true); } catch { }
+        }
+    }
+
+    private ElementReference? _dropzoneRef;
+    private DotNetObjectReference<FunctionProcessor>? _dotNetRef;
+    private bool _dropzoneInitialized = false;
+    private int _builtStudentsCount = 0;
+    private Dictionary<string,int>? _statusCounts;
+    private string? _studentsSummaryError;
+    private string? _statusSummary;
+
+    private bool _isProcessing;
+    private ProcessingResult? _result;
+    private Dictionary<string, string> _validationErrors = new();
+    private int _currentProcessingStep = 0;
+    private int _progressPercent = 0;
+    private string _progressMessage = "";
+    private string? _previewHtml;
+    private bool _showTestFiles = false;
+    private List<TestFileInfo> _testFiles = new();
+    private bool _loadingTestFiles = false;
+    private string? _testFilesError;
+    private bool _onlyChanged = false;
+
+    // UI state for function-level hint
+    private bool _showFunctionHint = false;
+
+    // UI state for per-file source hints
+    private HashSet<string> _visibleSourceHints = new();
+
+    private record TestFileInfo(string Url, string Name, string? SizeDisplay, string? LastModifiedDisplay);
+
+    private bool OnlyChanged
+    {
+        get => _onlyChanged;
+        set
+        {
+            if (_onlyChanged == value) return;
+            _onlyChanged = value;
+            // persist asynchronously (fire-and-forget)
+            try { _ = JS.InvokeVoidAsync("localStorage.setItem", "onlyChanged", _onlyChanged.ToString()); } catch { }
+        }
+    }
+
+    private static string MapStatusToLabel(string status)
+    {
+        return status switch
+        {
+            "2" => "aktiv",
+            "6" => "extern",
+            "8" => "Abschluss",
+            "9" => "abgegangen",
+            _ => "sonstige",
+        };
+    }
+
+    private static string BuildStatusSummary(int total, Dictionary<string,int>? counts)
+    {
+        if (counts == null || counts.Count == 0) return "keine Daten";
+        // map keys to labels and aggregate by label
+        var mapped = new Dictionary<string,int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in counts)
+        {
+            var label = MapStatusToLabel(kv.Key);
+            if (!mapped.ContainsKey(label)) mapped[label] = 0;
+            mapped[label] += kv.Value;
+        }
+        // build string in order: aktiv, extern, Abschluss, abgegangen, sonstige
+        var order = new[] { "aktiv", "extern", "Abschluss", "abgegangen" };
+        var parts = new List<string>();
+        foreach (var o in order)
+        {
+            if (mapped.TryGetValue(o, out var c) && c > 0) parts.Add($"{c} ({o})");
+        }
+        if (mapped.TryGetValue("sonstige", out var s) && s > 0) parts.Add($"{s} (sonstige)");
+        return parts.Any() ? string.Join(", ", parts) : "keine Daten";
+    }
+
+    private void ToggleFunctionHint()
+    {
+        _showFunctionHint = !_showFunctionHint;
+        StateHasChanged();
+    }
+
+    private void ToggleSourceHint(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return;
+        if (_visibleSourceHints.Contains(key)) _visibleSourceHints.Remove(key);
+        else _visibleSourceHints.Add(key);
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            // subscribe to global "return to start" requests (header click)
+            try { ProcessingService.ReturnToStartRequested += HandleReturnToStart; } catch { }
+            // load stored values (like mailDomain) into fields
+            try
+            {
+                foreach (var field in Config.InputFields)
+                {
+                    var v = await JS.InvokeAsync<string>("localStorage.getItem", field.Key);
+                    if (!string.IsNullOrWhiteSpace(v)) field.Value = v!;
+                }
+                try
+                {
+                    var oc = await JS.InvokeAsync<string>("localStorage.getItem", "onlyChanged");
+                    if (!string.IsNullOrWhiteSpace(oc) && bool.TryParse(oc, out var b)) _onlyChanged = b;
+                }
+                catch { }
+            }
+            catch { }
+        }
+
+        // Ensure dropzone is initialized (also re-initialize after Reset)
+        if (!_dropzoneInitialized)
+        {
+            var criteria = Config.RequiredFiles.Select(f => new { name = f.Name, allowedExtensions = f.AllowedExtensions, matchingRegex = f.MatchingRegex }).ToArray();
+            var serialized = System.Text.Json.JsonSerializer.Serialize(criteria);
+
+            // Try a few times to call the JS initializer because scripts may not be loaded immediately after render
+            var attempts = 0;
+            var maxAttempts = 6;
+            var delayMs = 200;
+            while (!_dropzoneInitialized && attempts < maxAttempts)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("setupDropzone", _dropzoneRef, serialized, _dotNetRef, Config.Id);
+                    _dropzoneInitialized = true;
+                }
+                catch (JSException jsEx)
+                {
+                    attempts++;
+                    Console.WriteLine($"setupDropzone not ready, retry {attempts}/{maxAttempts}: {jsEx.Message}");
+                    await Task.Delay(delayMs);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to initialize dropzone: {ex}");
+                    break;
+                }
+            }
+            if (!_dropzoneInitialized)
+            {
+                Console.WriteLine("Dropzone initialization failed after retries.");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _dotNetRef?.Dispose();
+        try { ProcessingService.ReturnToStartRequested -= HandleReturnToStart; } catch { }
+    }
+
+    private async Task HandleReturnToStart()
+    {
+        try
+        {
+            Reset();
+        }
+        catch { }
+
+        // Notify parent (same behavior as clicking the component's Back button)
+        if (OnBack.HasDelegate)
+        {
+            try { await OnBack.InvokeAsync(null); } catch { }
+        }
+        else
+        {
+            try { Nav.NavigateTo("/", true); } catch { }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDropFile(string fileName, string base64)
+    {
+        try
+        {
+            Console.WriteLine($"OnDropFile invoked: fileName={fileName}, base64Length={(base64?.Length ?? 0)}");
+            var bytes = Convert.FromBase64String(base64);
+            Console.WriteLine($"OnDropFile: decoded bytes={bytes.Length}");
+            // determine extension from dropped filename
+            var ext = Path.GetExtension(fileName)?.ToLowerInvariant() ?? string.Empty;
+
+            // find matching required file by name (contains) and extension match (if specified)
+            var match = Config.RequiredFiles.Concat(Config.OptionalFiles)
+                .FirstOrDefault(f =>
+                {
+                    if (!fileName.Contains(f.Name, StringComparison.OrdinalIgnoreCase))
+                        return false;
+                    if (f.AllowedExtensions == null || f.AllowedExtensions.Length == 0)
+                        return true;
+                    return f.AllowedExtensions.Any(ae => ae.Equals(ext, StringComparison.OrdinalIgnoreCase));
+                });
+
+            if (match == null) return;
+
+            match.Content = bytes;
+            match.FileName = fileName;
+            match.IsUploaded = true;
+            // analyze file for lines and columns using configured delimiter/quote/encoding
+            var (lines, cols) = ProcessingService.AnalyzeFile(bytes, match.Delimiter ?? "\t", match.Quote ?? string.Empty, match.Encoding ?? "utf-8");
+            match.LineCount = lines;
+            match.ColumnCount = cols;
+
+            ProcessingService.StoreFile(match.FileKey, bytes);
+            // try to (re)build typed students summary when files are uploaded via drop
+            try
+            {
+                _studentsSummaryError = null;
+                    var students = ProcessingService.BuildStudentsFromStoredFiles();
+                    _builtStudentsCount = students?.Count ?? 0;
+                    _statusCounts = students?.GroupBy(st => st.Status ?? string.Empty)
+                        .ToDictionary(g => string.IsNullOrWhiteSpace(g.Key) ? "(empty)" : g.Key, g => g.Count())
+                        ?? new Dictionary<string,int>();
+                    _statusSummary = BuildStatusSummary(_builtStudentsCount, _statusCounts);
+                    // Log students to console automatically so developer always sees them (sorted by Bildungsgaenge count)
+                    try
+                    {
+                        var decorated = students
+                            .Select(s => new { Student = s, BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0 })
+                            .OrderByDescending(x => x.BildungsgangeCount)
+                            .ThenBy(x => x.Student?.Nachname)
+                            .ThenBy(x => x.Student?.Vorname)
+                            .ToList();
+                        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                        var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
+                        await JS.InvokeVoidAsync("console.info", $"Students (sorted by Bildungsgänge): {decorated.Count} entries");
+                        await JS.InvokeVoidAsync("debugLogObject", json);
+                    }
+                    catch { }
+            }
+            catch (Exception ex)
+            {
+                _studentsSummaryError = ex.Message;
+                _statusCounts = null;
+                _builtStudentsCount = 0;
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Drop handling error: {ex}");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnUploadResult(string json)
+    {
+        try
+        {
+            Console.WriteLine($"OnUploadResult invoked: jsonLength={(json?.Length ?? 0)}");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                string? fileName = null;
+                bool accepted = false;
+                try
+                {
+                    fileName = item.GetProperty("file").GetString();
+                    var hasAccepted = item.TryGetProperty("accepted", out var acceptedProp);
+                    accepted = hasAccepted && acceptedProp.GetBoolean();
+                    Console.WriteLine($"OnUploadResult: item -> file={fileName}, accepted={accepted}");
+                }
+                catch { }
+                if (!accepted) continue;
+                string fileKey = item.TryGetProperty("fileKey", out var fk) ? fk.GetString() ?? string.Empty : string.Empty;
+                int lineCount = item.TryGetProperty("lineCount", out var lc) ? lc.GetInt32() : 0;
+                int columnCount = item.TryGetProperty("columnCount", out var cc) ? cc.GetInt32() : 0;
+                string? timestamp = item.TryGetProperty("timestamp", out var ts) && ts.ValueKind == System.Text.Json.JsonValueKind.String ? ts.GetString() : null;
+
+                if (!string.IsNullOrEmpty(fileKey))
+                {
+                    var match = Config.RequiredFiles.Concat(Config.OptionalFiles).FirstOrDefault(f => f.FileKey == fileKey);
+                    if (match != null)
+                    {
+                        match.FileName = fileName;
+                        match.IsUploaded = true;
+                        match.LineCount = lineCount;
+                        match.ColumnCount = columnCount;
+                        match.LastModifiedDisplay = timestamp;
+                        // Try to retrieve stored bytes from ProcessingService (the API already stored them server-side)
+                        var bytes = ProcessingService.GetFile(match.FileKey);
+                        if (bytes != null)
+                        {
+                            match.Content = bytes;
+                            // ensure counts are up-to-date
+                            var (lines, cols) = ProcessingService.AnalyzeFile(bytes, match.Delimiter ?? "\t", match.Quote ?? string.Empty, match.Encoding ?? "utf-8");
+                            match.LineCount = lines;
+                            match.ColumnCount = cols;
+                            // try to (re)build typed students summary when upload result arrives
+                            try
+                            {
+                                _studentsSummaryError = null;
+                                var students = ProcessingService.BuildStudentsFromStoredFiles();
+                                _builtStudentsCount = students?.Count ?? 0;
+                                _statusCounts = students?.GroupBy(st => st.Status ?? string.Empty)
+                                    .ToDictionary(g => string.IsNullOrWhiteSpace(g.Key) ? "(empty)" : g.Key, g => g.Count())
+                                    ?? new Dictionary<string,int>();
+                            }
+                            catch (Exception ex)
+                            {
+                                _studentsSummaryError = ex.Message;
+                                _statusCounts = null;
+                                _builtStudentsCount = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"OnUploadResult parse error: {ex}");
+        }
+    }
+
+    private string GetFileInputClass(string fileKey)
+    {
+        return _validationErrors.ContainsKey($"file_{fileKey}") ? "form-control is-invalid" : "form-control";
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e, RequiredFile file)
+    {
+        try
+        {
+            var browserFile = e.File;
+
+            // Extension prüfen
+            var fileExtension = Path.GetExtension(browserFile.Name).ToLowerInvariant();
+            if (!file.AllowedExtensions.Any(ext => ext.ToLowerInvariant() == fileExtension))
+            {
+                _validationErrors[$"file_{file.FileKey}"] = $"Ungültige Datei! Erlaubte Formate: {string.Join(", ", file.AllowedExtensions)}";
+                StateHasChanged();
+                return;
+            }
+
+            _validationErrors.Remove($"file_{file.FileKey}");
+
+            // Stream sicher lesen (Size ist long)
+            var size = (long)browserFile.Size;
+            var buffer = new byte[(int)Math.Min(size, 10 * 1024 * 1024)];
+            await using var stream = browserFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var read = await stream.ReadAsync(buffer);
+
+            if (read != buffer.Length)
+            {
+                Array.Resize(ref buffer, read);
+            }
+
+            file.Content = buffer;
+            file.FileName = browserFile.Name;
+            file.IsUploaded = true;
+            // analyze file for lines and columns
+            var (lines2, cols2) = ProcessingService.AnalyzeFile(buffer, file.Delimiter ?? "\t", file.Quote ?? string.Empty, file.Encoding ?? "utf-8");
+            file.LineCount = lines2;
+            file.ColumnCount = cols2;
+
+            ProcessingService.StoreFile(file.FileKey, buffer);
+            // try to (re)build typed students summary when files are uploaded via file selector
+            try
+            {
+                _studentsSummaryError = null;
+                var students = ProcessingService.BuildStudentsFromStoredFiles();
+                _builtStudentsCount = students?.Count ?? 0;
+                _statusCounts = students?.GroupBy(st => st.Status ?? string.Empty)
+                    .ToDictionary(g => string.IsNullOrWhiteSpace(g.Key) ? "(empty)" : g.Key, g => g.Count())
+                    ?? new Dictionary<string,int>();
+                _statusSummary = BuildStatusSummary(_builtStudentsCount, _statusCounts);
+            }
+            catch (Exception ex)
+            {
+                _studentsSummaryError = ex.Message;
+                _statusCounts = null;
+                _builtStudentsCount = 0;
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _validationErrors[$"file_{file.FileKey}"] = $"Fehler beim Hochladen: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private string GetFieldValidationClass(InputField field)
+    {
+        if (_validationErrors.ContainsKey(field.Key))
+            return "form-control is-invalid";
+        
+        if (!string.IsNullOrWhiteSpace(field.Value))
+        {
+            var (isValid, _) = ConfigService.ValidateField(field, field.Value);
+            return isValid ? "form-control is-valid" : "form-control";
+        }
+        
+        return "form-control";
+    }
+
+    private async Task ValidateField(InputField field)
+    {
+        var (isValid, errorMessage) = ConfigService.ValidateField(field, field.Value);
+        if (!isValid)
+            _validationErrors[field.Key] = errorMessage;
+        else
+        {
+            _validationErrors.Remove(field.Key);
+            // If this is the mailDomain field and valid, persist to localStorage immediately
+            if (field.Key == "mailDomain")
+            {
+                try { await JS.InvokeVoidAsync("localStorage.setItem", field.Key, field.Value); } catch { }
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private bool AllRequiredFilesUploaded() => Config.RequiredFiles.All(f => f.IsUploaded);
+    
+    private bool AllRequiredFieldsFilled() => Config.InputFields
+        .Where(f => f.IsRequired)
+        .All(f => !string.IsNullOrWhiteSpace(f.Value));
+    
+    private bool CanProcess()
+    {
+        if (_validationErrors.Keys.Any(k => k.StartsWith("file_")))
+            return false;
+
+        // Ensure line count parity for mailadresse-setzen
+        if (!ValidateFileLineCounts())
+            return false;
+            
+        foreach (var field in Config.InputFields.Where(f => f.IsRequired))
+        {
+            if (!string.IsNullOrWhiteSpace(field.Value))
+            {
+                var (isValid, errorMessage) = ConfigService.ValidateField(field, field.Value);
+                if (!isValid)
+                {
+                    if (!_validationErrors.ContainsKey(field.Key))
+                        _validationErrors[field.Key] = errorMessage;
+                    return false;
+                }
+            }
+        }
+        
+        return AllRequiredFilesUploaded() && AllRequiredFieldsFilled() && !_validationErrors.Any();
+    }
+
+    private bool ValidateFileLineCounts()
+    {
+        // Only relevant for the mailadresse-setzen function
+        if (Config?.Id != "mailadresse-setzen")
+        {
+            _validationErrors.Remove("file_linecount_mismatch");
+            return true;
+        }
+
+        var basis = Config.RequiredFiles.Concat(Config.OptionalFiles).FirstOrDefault(f => f.FileKey == "basisdaten");
+        var zusatz = Config.RequiredFiles.Concat(Config.OptionalFiles).FirstOrDefault(f => f.FileKey == "zusatzdaten");
+
+        if (basis == null || zusatz == null)
+        {
+            _validationErrors.Remove("file_linecount_mismatch");
+            return true;
+        }
+
+        if (!basis.IsUploaded || !zusatz.IsUploaded)
+        {
+            _validationErrors.Remove("file_linecount_mismatch");
+            return true; // other validation will prevent processing until uploaded
+        }
+
+        if (basis.LineCount != zusatz.LineCount)
+        {
+            _validationErrors["file_linecount_mismatch"] = $"Anzahl Zeilen stimmen nicht überein: {basis.FileName} = {basis.LineCount}, {zusatz.FileName} = {zusatz.LineCount}. Bitte prüfen und erneut hochladen.";
+            return false;
+        }
+
+        _validationErrors.Remove("file_linecount_mismatch");
+        return true;
+    }
+
+    private async Task ProcessFiles()
+    {
+        foreach (var field in Config.InputFields.Where(f => f.IsRequired))
+            await ValidateField(field);
+
+        if (_validationErrors.Any()) return;
+
+        foreach (var field in Config.InputFields)
+        {
+            try { await JS.InvokeVoidAsync("localStorage.setItem", field.Key, field.Value); }
+            catch { }
+        }
+
+        // Start single, smooth progress flow: advance through configured steps,
+        // then run final processing while showing a steady progress value.
+        _isProcessing = true;
+        _currentProcessingStep = 0;
+        _progressPercent = 0;
+        _progressMessage = "Starte Verarbeitung...";
+        StateHasChanged();
+
+        // Brief pause so UI shows the start state
+        await Task.Delay(300);
+
+        var totalSteps = Math.Max(1, Config.ProcessingSteps.Count);
+        // Advance through steps (visual only)
+        for (int i = 0; i < Config.ProcessingSteps.Count; i++)
+        {
+            _currentProcessingStep = i;
+            // Reserve final 10% for the actual processing call
+            var stepPercent = (int)(((i + 1) * 0.9) * 100.0 / totalSteps);
+            _progressPercent = Math.Clamp(stepPercent, 0, 90);
+            _progressMessage = Config.ProcessingSteps[i].Description;
+            StateHasChanged();
+            await Task.Delay(700);
+        }
+
+        // Prepare inputs and indicate processing phase (final 10%)
+        var inputs = Config.InputFields.ToDictionary(f => f.Key, f => f.Value);
+        inputs["onlyChanged"] = _onlyChanged.ToString();
+        var allFiles = Config.RequiredFiles.Concat(Config.OptionalFiles).Where(f => f.IsUploaded).ToList();
+
+        _progressMessage = "Verarbeitung...";
+        _progressPercent = 90;
+        StateHasChanged();
+
+        // Actual processing (may take time)
+        if (Config.Id == "mailadresse-setzen")
+        {
+            _result = await ProcessingService.ProcessMailadresseSetzen(allFiles, inputs, Config);
+        }
+        else if (Config.Id == "webuntis-co" || Config.Id == "webuntis-export")
+        {
+            _result = await ProcessingService.ProcessWebuntis(allFiles, inputs);
+        }
+        else
+        {
+            _result = new ProcessingResult { Success = false, Message = "Unbekannte Funktion: " + Config.Id };
+        }
+
+        // Complete progress
+        _progressPercent = 100;
+        _progressMessage = _result?.Success == true ? "Fertig" : "Fehler bei der Verarbeitung";
+        _isProcessing = false;
+        StateHasChanged();
+    }
+
+    private async Task DownloadFile(OutputFile file)
+    {
+        try
+        {
+            var base64 = Convert.ToBase64String(file.Content);
+            await JS.InvokeVoidAsync("downloadFile", file.FileName, base64);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Download-Fehler: {ex.Message}");
+        }
+    }
+
+    private async Task DumpStudentsToConsole()
+    {
+        try
+        {
+            var students = ProcessingService.BuildStudentsFromStoredFiles() ?? new List<Models.Student>();
+
+            // Decorate with Bildungsgänge count and sort descending by that count so console shows the most-multi-enrolled first
+            var decorated = students
+                .Select(s => new
+                {
+                    Student = s,
+                    BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0
+                })
+                .OrderByDescending(x => x.BildungsgangeCount)
+                .ThenBy(x => x.Student?.Nachname)
+                .ThenBy(x => x.Student?.Vorname)
+                .ToList();
+
+            var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+            var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
+
+            // Log a short summary and then the structured object so arrays/lists are expandable in DevTools
+            try { await JS.InvokeVoidAsync("console.info", $"Students (sorted by Bildungsgänge): {decorated.Count} entries"); } catch { }
+            await JS.InvokeVoidAsync("debugLogObject", json);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"DumpStudentsToConsole error: {ex}");
+            try { await JS.InvokeVoidAsync("console.error", ex.Message); } catch { }
+        }
+    }
+
+    private void Reset()
+    {
+        _result = null;
+        foreach (var file in Config.RequiredFiles.Concat(Config.OptionalFiles))
+        {
+            file.IsUploaded = false;
+            file.FileName = null;
+            file.Content = null;
+            file.LineCount = 0;
+            file.ColumnCount = 0;
+            file.LastModifiedDisplay = null;
+        }
+        ProcessingService.ClearFiles();
+        // mark dropzone for reinitialization so upload works after reset
+        _dropzoneInitialized = false;
+        StateHasChanged();
+    }
+
+    private async Task PreviewMailaddresses()
+    {
+        // validate fields first
+        foreach (var field in Config.InputFields.Where(f => f.IsRequired))
+            await ValidateField(field);
+
+        if (_validationErrors.Any()) return;
+
+        var inputs = Config.InputFields.ToDictionary(f => f.Key, f => f.Value);
+        // include checkbox state for preview
+        inputs["onlyChanged"] = _onlyChanged.ToString();
+        var allFiles = Config.RequiredFiles.Concat(Config.OptionalFiles).Where(f => f.IsUploaded).ToList();
+
+        var preview = await ProcessingService.PreviewMailadresseSetzen(allFiles, inputs);
+        if (!string.IsNullOrWhiteSpace(preview.MessageHtml))
+            _previewHtml = preview.MessageHtml;
+        else if (!string.IsNullOrWhiteSpace(preview.Message))
+            _previewHtml = $"<pre>{System.Net.WebUtility.HtmlEncode(preview.Message)}</pre>";
+        else
+            _previewHtml = null;
+
+        StateHasChanged();
+    }
+
+    private async Task ApplyMailaddresses()
+    {
+        // validate again
+        foreach (var field in Config.InputFields.Where(f => f.IsRequired))
+            await ValidateField(field);
+        if (_validationErrors.Any()) return;
+
+        _isProcessing = true;
+        _currentProcessingStep = 0;
+        _progressPercent = 0;
+        _progressMessage = "Wende Änderungen an...";
+        StateHasChanged();
+
+        var inputs = Config.InputFields.ToDictionary(f => f.Key, f => f.Value);
+        inputs["onlyChanged"] = _onlyChanged.ToString();
+        var allFiles = Config.RequiredFiles.Concat(Config.OptionalFiles).Where(f => f.IsUploaded).ToList();
+
+        _result = await ProcessingService.ProcessMailadresseSetzen(allFiles, inputs, Config);
+
+        _isProcessing = false;
+        _previewHtml = null;
+        StateHasChanged();
+    }
+
+    private void CancelPreview()
+    {
+        _previewHtml = null;
+        StateHasChanged();
+    }
+
+    private async Task ToggleTestFiles()
+    {
+        _showTestFiles = !_showTestFiles;
+        if (_showTestFiles) await LoadTestFilesAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadTestFilesAsync()
+    {
+        _testFiles.Clear();
+        _testFilesError = null;
+        _loadingTestFiles = true;
+        StateHasChanged();
+
+        try
+        {
+            if (Config?.TestFiles == null || !Config.TestFiles.Any())
+            {
+                _testFilesError = "Keine Testdateien in der Funktion konfiguriert.";
+                return;
+            }
+
+            foreach (var s in Config.TestFiles)
+            {
+                if (string.IsNullOrWhiteSpace(s)) continue;
+
+                string full;
+                if (s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) full = s;
+                else if (s.StartsWith("/")) full = Nav.BaseUri.TrimEnd('/') + s;
+                else full = Nav.BaseUri.TrimEnd('/') + "/" + s;
+
+                string? sizeDisplay = null;
+                string? lastModified = null;
+                try
+                {
+                    var head = await Http.SendAsync(new HttpRequestMessage(HttpMethod.Head, full));
+                    if (head.IsSuccessStatusCode)
+                    {
+                        if (head.Content.Headers.ContentLength.HasValue)
+                        {
+                            var bytes = head.Content.Headers.ContentLength.Value;
+                            sizeDisplay = bytes >= 1024 ? $"{(bytes / 1024)} KB" : $"{bytes} B";
+                        }
+                        if (head.Content.Headers.LastModified.HasValue) lastModified = head.Content.Headers.LastModified.Value.UtcDateTime.ToString("g");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var resp = await Http.GetAsync(full);
+                            if (resp.IsSuccessStatusCode && resp.Content.Headers.ContentLength.HasValue)
+                            {
+                                var bytes = resp.Content.Headers.ContentLength.Value;
+                                sizeDisplay = bytes >= 1024 ? $"{(bytes / 1024)} KB" : $"{bytes} B";
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+
+                _testFiles.Add(new TestFileInfo(full, Path.GetFileName(s), sizeDisplay, lastModified));
+            }
+        }
+        catch (Exception ex)
+        {
+            _testFilesError = ex.Message;
+            Console.WriteLine($"Failed to load test files from {Nav.BaseUri}: {ex}");
+        }
+        finally
+        {
+            _loadingTestFiles = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadAllTestFiles()
+    {
+        foreach (var tf in _testFiles)
+        {
+            try
+            {
+                var bytes = await Http.GetByteArrayAsync(tf.Url);
+                var base64 = Convert.ToBase64String(bytes);
+                await JS.InvokeVoidAsync("downloadFile", tf.Name, base64);
+            }
+            catch { }
+        }
+    }
+
+    private async Task<string> GetBase64FromUrl(string url)
+    {
+        using var httpClient = new HttpClient();
+        var bytes = await httpClient.GetByteArrayAsync(url);
+        return Convert.ToBase64String(bytes);
+    }
+
+}

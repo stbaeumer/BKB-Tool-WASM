@@ -1,0 +1,86 @@
+Hier die Verarbeitungslogik von "Webuntis":
+
+notwendige Dateien:
+Student_.csv
+SchuelerBasisdaten.dat
+SchuelerZusatzdaten.dat
+SchuelerAdressen.dat
+SchuelerErzieher.dat
+
+Ziel: 
+Erstelle eine Datei namens ImportNachWebuntis-Stammdaten-Schueler.csv. Die Datei enthält alle tatsächlich existierenden Schüler (Soll) 
+aus der SchuelerBasisdaten.dat. Die Ist-Schüler stehen in der Student_....csv. Wenn ein Schüler in Student_ existiert, 
+aber nicht (mehr) in SchuelerBasisdaten, dann wird er in der ImportNachWebuntis-Stammdaten-Schueler.csv aufgenommen und mit dem Austrittsdatum von heute versehen.
+
+Zeige mir im Browser an, welche Schüler neu sind oder gelöscht werden oder wo sich die Klasse geändert hat
+
+Hinweise: 
+In SchuelerBasisdaten und SchuelerZusatzdaten matcht jeder Schueler exakt auf die selbe Zeilenzahl.
+Alle Anderen *.dat-Dateien matchen auf Vorname, Nachname und Geburtsdatum.
+Hier die Spalten der ImportNachWebuntis-Stammdaten-Schueler.csv:
+
+E-Mail = SchuelerZusatzdaten["schulische E-Mail"].ToString();
+Familienname = student.Nachname;
+Vorname = student.Vorname;
+Klasse = student.Klasse;
+Kurzname = SchuelerZusatzdaten["schulische E-Mail"].ToString().Split('@')[0];
+Geschlecht = student.Geschlecht?.ToString()?.ToUpper() ?? string.Empty;
+Geburtsdatum = student.Geburtsdatum;
+Eintrittsdatum = "";
+Austrittsdatum = Status == "2" || Status == "6" ? "31.07." + Global.AktSj[1] : student.ZeugnisdatumLetztesZeugnisInDieserKlasse != null ? student.ZeugnisdatumLetztesZeugnisInDieserKlasse.ToShortDateString() : schuelerZusatzdaten["Entlassdatum"].ToString();
+Telefon = schuelerZusatzdaten["Telefon-Nr."].ToString();
+Mobil = "";
+Strasse = student.Straße.ToString();
+PLZ = student.Postleitzahl.ToString();
+Ort = student.Ort.ToString();
+ErzName = alter >= 18 ? "" : SchuelerErzieher["Vorname 1.Person"].ToString() + " " + SchuelerErzieher["Nachname 1.Person"].ToString();
+ErzMobil = alter >= 18 ? "" : "";
+ErzTelefon = alter >= 18 ? "" : "";
+Volljährig = alter >= 18 ? "1" : "0";
+BetriebName = SchuelerAdressen["Name1"]
+BetriebStrasse = SchuelerAdressen == null ? "" : SchuelerAdressen["Straße"].ToString();
+BetriebPlz = SchuelerAdressen == null ? "" : SchuelerAdressen["PLZ"].ToString();
+BetriebOrt = SchuelerAdressen == null ? "" : SchuelerAdressen["Ort"].ToString();
+BetriebTelefon = SchuelerAdressen == null ? "" : SchuelerAdressen["1. Tel.-Nr."].ToString();
+BetriebTelefon2 = SchuelerAdressen == null ? "" : SchuelerAdressen["2. Tel.-Nr."].ToString();
+BetriebMail = SchuelerAdressen == null ? "" : SchuelerAdressen["E-Mail"].ToString();
+BetriebBetreuer = SchuelerAdressen == null ? "" : (SchuelerAdressen["Betreuer Anrede"] == null || SchuelerAdressen["Betreuer Anrede"].ToString() == "" ? "" : SchuelerAdressen["Betreuer Anrede"].ToString() + " ") + (SchuelerAdressen["Betreuer Vorname"] == null || SchuelerAdressen["Betreuer Vorname"].ToString() == "" ? "" : SchuelerAdressen["Betreuer Vorname"].ToString() + " ") + (SchuelerAdressen["Betreuer Nachname"] == null ? "" : SchuelerAdressen["Betreuer Nachname"].ToString());
+SchildAdressId = SchuelerAdressen == null ? "" : SchuelerAdressen["SchILD-Adress-ID"].ToString();
+O365Identität = student.MailSchulisch;
+Benutzername = student.MailSchulisch.Replace("@students.berufskolleg-borken.de", "");
+
+// Es werden nur diejenigen Schüler exportiert die aktiv (Staus 2) oder Gast (Status 6) sind, 
+// und alle anderen, deren Entlassdatum heute oder in den letzten sechs Wochen war.                                         
+if (student.Status == "2" || student.Status == "6" || student.NochKeineAnzahlWochenHer(6))
+{
+	zieldatei.Add(record);
+}
+
+
+Möglche Funktionen:
+
+public static List<string> AktSj = new List<string>()
+{
+    (DateTime.Now.Month > 7 ? DateTime.Now.Year : DateTime.Now.Year - 1).ToString(),
+    (DateTime.Now.Month > 7 ? DateTime.Now.Year + 1 : DateTime.Now.Year).ToString()
+};
+
+
+internal bool NochKeineAnzahlWochenHer(int anzahlWochen)
+{
+    if (!string.IsNullOrEmpty(Entlassdatum))
+    {
+        DateTime parsedEntlassdatum;
+        if (DateTime.TryParseExact(Entlassdatum, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedEntlassdatum))
+        {
+            var heute = DateTime.Now.Date;
+            var sechsWochenZurueck = heute.AddDays(-7 * anzahlWochen);
+
+            if (parsedEntlassdatum >= sechsWochenZurueck && parsedEntlassdatum <= heute)
+            {
+                return true;
+            }
+        }
+    }        
+    return false;                    
+}

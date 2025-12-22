@@ -1,0 +1,159 @@
+{
+  "functions": [
+    {
+      "id": "mailadresse-setzen",
+      "name": "Mailadresse setzen",
+      "description": "Ergänzt fehlende schulische E-Mail-Adressen in den Zusatzdaten unter Berücksichtigung der Basisdaten.",
+      "functionHint": "Mailadressen werden wie folgt gebildet:\n1) Erster Buchstabe des Nachnamens (nach Normalisierung, Umlaute aufgelöst)\n2) Erster Buchstabe des Vornamens (nach Normalisierung)\n3) Geburtsdatum im Format `yyMMdd`\nBeispiel: Müller, Anna, geboren 2008-05-03 → `ma080503@<domain>`\nHinweis: Bei Kollisionen wird die Adresse nicht automatisch vergeben; solche Fälle müssen in SchILD-NRW bereinigt werden.",
+      "requiredFiles": [
+        {
+          "name": "SchuelerBasisdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "basisdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        },
+        {
+          "name": "SchuelerZusatzdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "zusatzdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [
+        {
+          "key": "mailDomain",
+          "label": "Mail-Domain",
+          "placeholder": "@students.meine-schule.de",
+          "defaultValue": "@students.meine-schule.de",
+          "validationRegex": "^@?[^\\s@]+\\.[^\\s@]+$",
+          "validationErrorMessage": "Bitte eine gültige Domain angeben (z. B. @students.meine-schule.de)",
+          "isRequired": true
+        }
+      ],
+      "processingSteps": [
+        { "functionName": "SetzeMailadressen", "description": "Mailadressen generieren" },
+        { "functionName": "WriteOutput", "description": "Ausgabedateien erzeugen" }
+      ],
+      "submitButtonLabel": "Mailadressen setzen",
+      "successMessage": "Mailadressen wurden ergänzt.",
+      "outputFiles": [
+        { "fileKey": "zusatzdaten_modified", "fileName": "SchuelerZusatzdaten_modified.dat", "hint": "Ergänzte Zusatzdaten" }
+      ],
+      "testFiles": [
+        "/testfiles/mailadresse-setzen/Fall_1_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_1_SchuelerZusatzdaten_Abweichende_Zeilenanzahl_erkannt.dat",
+        "/testfiles/mailadresse-setzen/Fall_2_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_2_SchuelerZusatzdaten_Doppelte_Mailadresse_bei_Böhm_Beis_und_Samp_Test_erkannt.dat",
+        "/testfiles/mailadresse-setzen/Fall_3_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_3_SchuelerZusatzdaten_es_gibt_nichts_zu_tun.dat",
+        "/testfiles/mailadresse-setzen/Fall_4_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_4_SchuelerZusatzdaten_Fehlende_SchulischeMail_bei_Böhm_und_Beis_bereits_vergeben.dat",
+        "/testfiles/mailadresse-setzen/Fall_5_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_5_SchuelerZusatzdaten_Fehlende_SchulischeMail_bei_Böhm_und_Beis_ergänzen.dat",
+        "/testfiles/mailadresse-setzen/Fall_6_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_6_SchuelerZusatzdaten_Böhm_kommt_mehrfach_vor_mit_widersprechenden_Mails.dat",
+        "/testfiles/mailadresse-setzen/Fall_7_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_7_SchuelerZusatzdaten_Böhm_kommt_mehrfach_vor_bisher_nur_eine_Mail.dat",
+        "/testfiles/mailadresse-setzen/Fall_8_SchuelerBasisdaten.dat",
+        "/testfiles/mailadresse-setzen/Fall_8_SchuelerZusatzdaten_Böhm_kommt_mehrfach_vor_nichts_zu_tun.dat"
+      ]
+    },
+    {
+      "id": "webuntis-co",
+      "name": "Webuntis & Co",
+      "description": "Erzeuge Exportdateien für Webuntis, Geevoo, Littera",
+      "functionHint": "Es werden jetzt verschiedene Dateien in C:\\Users\\bm\\Downloads erstellt: Webuntis-Stammdaten-Schueler.csv, Webuntis-Stammdaten-Betriebe.csv, Webuntis-Stammdaten-Erzieher.csv, -ImportNachLittera.xml, -ImportNachNetman.csv\n\nHinweis:\n#1: Das Zeugnisdatum des letzten Zeugnisses in einer Klasse wird zum Webuntis-Austrittsdatum bei Schüler*innen, deren Status weder aktiv noch extern ist.\n#2: Damit korrekt ausgeschult wird, muss auch Abgang und Abschluss beim SchILD-Export angehakt werden.\n#3: Für den Betriebeimport sollte im Webuntis-Importprofil die SchildAdressId auf Schlüssel (externe) matchen.\n#4: Wenn ein Schüler mehrfach (als Duplikat) aktiv in SchILD ist, wird diejenige Klasse mit dem jüngsten Bildungsgangbeginn zur Klasse des Schülers in Webuntis.",
+      "requiredFiles": [
+        {
+          "name": "Student_",
+          "allowedExtensions": [".csv"],
+          "fileKey": "students",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?Student_.*",
+          "hasHeader": true,
+          "delimiter": ",",
+          "encoding": "utf-8",
+          "sourceHint": "Webuntis -> Administration -> Export. Hinweis: Die exportierte Datei beginnt mit 'Student_' (z. B. 'Student_2025-01.csv')."
+        },
+        {
+          "name": "SchuelerBasisdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "basisdaten",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerBasisdaten.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        }
+        ,
+        {
+          "name": "SchuelerZusatzdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "zusatzdaten",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerZusatzdaten.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        }
+        ,
+        {
+          "name": "SchuelerAdressen",
+          "allowedExtensions": [".dat"],
+          "fileKey": "adressen",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerAdressen.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Adressexport: SchuelerAdressen (enthält Telefon, Ort, PLZ, Straße) aus SchILD-Export"
+        },
+        {
+          "name": "SchuelerErzieher",
+          "allowedExtensions": [".dat"],
+          "fileKey": "erzieher",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerErzieher.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Erzieher/Personal Export: SchuelerErzieher (Kontaktangaben der Erzieher) aus SchILD-Export"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [],
+      "processingSteps": [
+        { "functionName": "webuntis-export", "description": "Erzeuge Webuntis/Geevoo/Littera Exporte" }
+      ],
+      "submitButtonLabel": "Exporte erzeugen",
+      "successMessage": "Exportdateien wurden erzeugt und im Downloads-Ordner abgelegt.",
+      "outputFiles": [
+        { "fileKey": "webuntis_students", "fileName": "Webuntis-Stammdaten-Schueler.csv", "hint": "Webuntis: Stammdaten Schüler" },
+        { "fileKey": "webuntis_companies", "fileName": "Webuntis-Stammdaten-Betriebe.csv", "hint": "Webuntis: Stammdaten Betriebe" },
+        { "fileKey": "webuntis_staff", "fileName": "Webuntis-Stammdaten-Erzieher.csv", "hint": "Webuntis: Stammdaten Erzieher/Personal" },
+        { "fileKey": "littera_import", "fileName": "ImportNachLittera.xml", "hint": "Littera Import (XML)" },
+        { "fileKey": "netman_import", "fileName": "ImportNachNetman.csv", "hint": "Netman Import (CSV)" }
+      ],
+      "testFiles": [
+        "/testfiles/webuntis/Fall_1_Student_Mehrfach_vorkommender_Böhm_wird_gefiltert.csv",
+        "/testfiles/webuntis/Fall_1_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_1_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_2_Student_Samp_als_neuer_Schueler_erkannt.csv",
+        "/testfiles/webuntis/Fall_2_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_2_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_3_Student_Böhm_2_Bildungsgaenge_späterer_Bildungsgangbeginn_gewinnt.csv",
+        "/testfiles/webuntis/Fall_3_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_3_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_4_Student_Samp_als_zu_löschender_SuS_Austrittsdatum_gesetzt.csv",
+        "/testfiles/webuntis/Fall_4_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_4_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/SchuelerErzieher.dat",
+        "/testfiles/webuntis/SchuelerAdressen.dat"
+      ]
+    }
+  ]
+}

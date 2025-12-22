@@ -1,0 +1,100 @@
+﻿@page "/"
+@using BKBToolClient.Models
+@using BKBToolClient.Services
+@inject FunctionConfigService ConfigService
+@inject IJSRuntime JS
+
+<PageTitle>BKB-Tool</PageTitle>
+
+<div class="container mt-4">
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Lade Funktionen...</span>
+            </div>
+        </div>
+    }
+    else if (_functions.Count == 0)
+    {
+        <div class="alert alert-warning">
+            Keine Funktionen verfügbar. Bitte prüfen Sie die Konfigurationsdatei.
+        </div>
+    }
+    else
+    {
+        if (_selectedFunction == null)
+        {
+            <div class="row">
+                @foreach (var function in _functions)
+                {
+                    var f = function; // capture local variable for the onclick lambda
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 function-card">
+                            <div class="card-body">
+                                <h5 class="card-title">@f.Name</h5>
+                                <p class="card-text" style="white-space: pre-line;">@f.Description</p>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <strong>Benötigte Dateien:</strong><br />
+                                        @string.Join(", ", f.RequiredFiles.Select(ff => ff.Name))
+                                    </small>
+                                </div>
+                                <button type="button" class="btn btn-primary mt-3 w-100" @onclick="() => SelectFunction(f)">
+                                    Auswählen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Schulnummer-Funktion entfernt. -->
+        }
+        else
+        {
+            <div class="mt-4">
+                <FunctionProcessor Config="_selectedFunction" OnBack="ClearSelection" />
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool _isLoading = true;
+    private FunctionConfig? _selectedFunction;
+    private List<FunctionConfig> _functions = new();
+
+    // (Schulnummer-Felder entfernt)
+
+    protected override async Task OnInitializedAsync()
+    {
+        _functions = await ConfigService.LoadFunctionsAsync();
+        _isLoading = false;
+        // No school-number-specific behavior required on initialization.
+    }
+
+    private Task SelectFunction(FunctionConfig function)
+    {
+        _selectedFunction = function;
+        StateHasChanged();
+        try { Console.WriteLine($"SelectFunction invoked: {function?.Id}"); } catch { }
+        return Task.CompletedTask;
+    }
+
+    private void ClearSelection()
+    {
+        _selectedFunction = null;
+        StateHasChanged();
+    }
+
+    private async Task SaveSchoolNumber()
+    {
+        // removed: school number is no longer used
+    }
+
+    private async Task SaveAdditionalFields()
+    {
+        // removed: additional fields tied to school number
+    }
+}
