@@ -1,0 +1,11 @@
+nohup: ignoring input
+/workspaces/BKB-Tool-WASM/BKBToolClient.csproj : warning NU1510: PackageReference System.Text.Encoding.CodePages will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+/workspaces/BKB-Tool-WASM/BKBToolClient.csproj : warning NU1510: PackageReference System.Text.Encoding.CodePages will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.
+WasmAppHost --use-staticwebassets --runtime-config /workspaces/BKB-Tool-WASM/bin/Debug/net10.0/BKBToolClient.runtimeconfig.json
+warn: Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServer[8]
+      The ASP.NET Core developer certificate is not trusted. For information about trusting the ASP.NET Core developer certificate, see https://aka.ms/aspnet/https-trust-dev-cert
+
+App url: http://127.0.0.1:45981/
+App url: https://127.0.0.1:46179/
+Debug at url: http://127.0.0.1:45981/_framework/debug
+Debug at url: https://127.0.0.1:46179/_framework/debug

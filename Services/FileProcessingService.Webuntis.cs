@@ -30,6 +30,15 @@ public partial class FileProcessingService
     private static string GetValue(IDictionary<string, string>? d, params string[] keys)
         => GetDictValue(d, keys);
 
+    private class WebuntisStats
+    {
+        public int Unchanged { get; set; }
+        public int Added { get; set; }
+        public int Removed { get; set; }
+        public int CsvCount { get; set; }
+        public int NewCount { get; set; }
+    }
+
     // Reusable matcher for other helper methods (matches by Nachname, Vorname, Geburtsdatum)
     private bool PersonMatches(IDictionary<string, string>? r, string lname, string fname, string bdate)
     {
@@ -56,24 +65,29 @@ public partial class FileProcessingService
 
     public async Task<ProcessingResult> ProcessWebuntis(List<RequiredFile> files, Dictionary<string, string> inputs)
     {
+        Console.WriteLine("ProcessWebuntis: CALLED");
         await Task.Yield();
         var result = new ProcessingResult { Success = true };
 
         try
         {
+            Console.WriteLine("ProcessWebuntis: In try block");
             var studentsFile = files.FirstOrDefault(f => f.FileKey == "students");
             var basisFile = files.FirstOrDefault(f => f.FileKey == "basisdaten");
             var zusatzFile = files.FirstOrDefault(f => f.FileKey == "zusatzdaten");
             var erzieherFile = files.FirstOrDefault(f => f.FileKey == "erzieher");
             var adressenFile = files.FirstOrDefault(f => f.FileKey == "adressen");
 
+            Console.WriteLine($"ProcessWebuntis: Files found - students={studentsFile?.FileName}, basisdaten={basisFile?.FileName}");
+
             // Require at least basis records. Other files are optional fallbacks (zusatz/adressen/erzieher/students)
             if (basisFile?.Content == null)
             {
+                Console.WriteLine("ProcessWebuntis: No basisdaten file, returning error");
                 return new ProcessingResult
                 {
                     Success = false,
-                    Message = "Für 'Webuntis & Co.' wird mindestens die Datei SchuelerBasisdaten.dat benötigt. Bitte laden Sie diese hoch. Optional können Sie SchuelerZusatzdaten.dat (für schulische E?Mails), SchuelerAdressen.dat und SchuelerErzieher.dat bereitstellen."
+                    Message = "Fï¿½r 'Webuntis & Co.' wird mindestens die Datei SchuelerBasisdaten.dat benï¿½tigt. Bitte laden Sie diese hoch. Optional kï¿½nnen Sie SchuelerZusatzdaten.dat (fï¿½r schulische E?Mails), SchuelerAdressen.dat und SchuelerErzieher.dat bereitstellen."
                 };
             }
 
@@ -304,6 +318,9 @@ public partial class FileProcessingService
                 }
                 catch { }
             }
+            
+            result.MessageHtml += $"<pre>âœ“ BASIS PARSED: {basisRecords?.Count ?? 0} records</pre>";
+            
             // Build exportStudents after parsing all input records
             var exportStudents = uniqueStudents;
             // Build strongly typed students list from basisRecords (and enrich with zusatz/adressen/erzieher later)
@@ -328,6 +345,63 @@ public partial class FileProcessingService
             {
                 result.MessageHtml += $"<pre>BuildTypedStudents error: {System.Net.WebUtility.HtmlEncode(ex.Message)}</pre>";
             }
+
+            // Compare CSV (uniqueStudents) vs new DatStudents to determine status counts
+            try
+            {
+                string NormalizeDate(string? dt)
+                {
+                    var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                    if (!string.IsNullOrWhiteSpace(dt) && DateTime.TryParseExact(dt.Trim(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                        return parsed.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+                    return (dt ?? string.Empty).Trim().ToLowerInvariant();
+                }
+
+                string MakeKey(string? ln, string? fn, string? bd)
+                    => ($"{(ln ?? string.Empty).Trim().ToLowerInvariant()}|{(fn ?? string.Empty).Trim().ToLowerInvariant()}|{NormalizeDate(bd)}");
+
+                var csvKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (uniqueStudents != null)
+                {
+                    foreach (var s in uniqueStudents)
+                    {
+                        s.TryGetValue("longName", out var ln);
+                        s.TryGetValue("foreName", out var fn);
+                        s.TryGetValue("birthDate", out var bd);
+                        csvKeys.Add(MakeKey(ln, fn, bd));
+                    }
+                }
+
+                var datKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (DatStudents != null)
+                {
+                    foreach (var ds in DatStudents)
+                    {
+                        datKeys.Add(MakeKey(ds.Nachname, ds.Vorname, ds.Geburtsdatum));
+                    }
+                }
+
+                int unchanged = datKeys.Intersect(csvKeys).Count();
+                int added = datKeys.Except(csvKeys).Count();
+                int removed = csvKeys.Except(datKeys).Count();
+
+                var statsObj = new WebuntisStats
+                {
+                    Unchanged = unchanged,
+                    Added = added,
+                    Removed = removed,
+                    CsvCount = csvKeys.Count,
+                    NewCount = datKeys.Count
+                };
+
+                try { StoreFile("webuntis_stats", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(statsObj))); } catch { }
+                result.MessageHtml += $"<pre>Vergleich: unverÃ¤ndert={unchanged}, neu={added}, gelÃ¶scht={removed} (CSV={csvKeys.Count}, Neu={datKeys.Count})</pre>";
+            }
+            catch (Exception ex)
+            {
+                result.MessageHtml += $"<pre>Vergleich CSV/Neu fehlgeschlagen: {System.Net.WebUtility.HtmlEncode(ex.Message)}</pre>";
+            }
+
             if (exportStudents == null || !exportStudents.Any())
             {
                 if (students != null && students.Any())
@@ -469,12 +543,8 @@ public partial class FileProcessingService
                     var birthForAge = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Geburtsdatum")) ? GetDictValue(sb, "Geburtsdatum") : bdate;
                     if (DateTime.TryParseExact(birthForAge, dateFormatsMain, CultureInfo.InvariantCulture, DateTimeStyles.None, out dob)) { alter = DateTime.Now.Year - dob.Year; if (DateTime.Now < dob.AddYears(alter)) alter--; }
 
-                    bool includeRecord = false;
-                    if (includeAllFromBasis) includeRecord = true;
+                    // Export ALL students, no status filtering
                     if (string.IsNullOrWhiteSpace(status)) status = GetS("Status");
-                    if (status == "2" || status == "6") includeRecord = true;
-                    else if (sz != null && sz.TryGetValue("Entlassdatum", out var entl) && DateTime.TryParseExact(entl, new[] { "dd.MM.yyyy", "d.M.yyyy" }, CultureInfo.InvariantCulture, DateTimeStyles.None, out var entDate) && entDate >= DateTime.Now.AddDays(-42)) includeRecord = true;
-                    if (!includeRecord) continue;
 
                     var email = string.Empty;
                     try { email = GetDictValue(sz, "schulische E-Mail", "MailSchulisch", "schulische E-Mail", "E-Mail"); } catch { }
@@ -492,7 +562,7 @@ public partial class FileProcessingService
 
                     var telefon = sz != null && sz.TryGetValue("Telefon-Nr.", out var tel) ? tel : string.Empty;
                     var mobil = string.Empty;
-                    var strasse = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Straße", "Strasse")) ? GetDictValue(sb, "Straße", "Strasse") : (GetS("Straße") ?? GetS("street") ?? string.Empty);
+                    var strasse = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Straï¿½e", "Strasse")) ? GetDictValue(sb, "Straï¿½e", "Strasse") : (GetS("Straï¿½e") ?? GetS("street") ?? string.Empty);
                     var plz = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Postleitzahl", "PLZ")) ? GetDictValue(sb, "Postleitzahl", "PLZ") : (GetS("Postleitzahl") ?? GetS("PLZ") ?? GetS("postCode") ?? string.Empty);
                     var ort = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Ort")) ? GetDictValue(sb, "Ort") : (GetS("Ort") ?? GetS("city") ?? string.Empty);
                     var erzName = string.Empty;
@@ -503,7 +573,7 @@ public partial class FileProcessingService
                         // Use the Erzieher record fields when available (populate ErzName) only for minors
                         var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
                         var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
-                        var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
+                        var streetErz = GetDictValue(erz, "Straï¿½e", "Strasse", "street");
                         var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                         if (!string.IsNullOrWhiteSpace(combined))
                         {
@@ -514,7 +584,7 @@ public partial class FileProcessingService
                     }
                     var volljaehrig = alter >= 18 ? "1" : "0";
                     var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
-                    var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
+                    var betrStr = ad != null ? GetDictValue(ad, "Straï¿½e", "Strasse", "street") : string.Empty;
                     var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
                     var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
                     var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
@@ -562,25 +632,131 @@ public partial class FileProcessingService
             try
             {
                 var aktSj0 = (DateTime.Now.Month > 7 ? DateTime.Now.Year : DateTime.Now.Year - 1).ToString();
+                
+                result.MessageHtml += $"<pre>DEBUG: DatStudents={DatStudents?.Count ?? 0}, basisRecords={basisRecords?.Count ?? 0}, exportStudents={exportStudents?.Count ?? 0}</pre>";
+                Console.WriteLine($"ProcessWebuntis: Starting CSV generation. DatStudents count={DatStudents?.Count ?? 0}, targetRowsWritten={targetRowsWritten}");
 
                 using (var msTarget = new System.IO.MemoryStream())
                 {
-                    using (var swt = new System.IO.StreamWriter(msTarget, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
-                    {
-                        swt.WriteLine(string.Join(',', targetHeaders));
+                using (var swt = new System.IO.StreamWriter(msTarget, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
+                        {
+                            swt.WriteLine(string.Join(',', targetHeaders));
+                            Console.WriteLine($"ProcessWebuntis: CSV header written");
 
-                        // If no students file was provided but basisRecords exist, include all basis records
-                        var includeAllFromBasis = (studentsFile?.Content == null) && (basisRecords != null && basisRecords.Any());
+                            // Generate CSV from DatStudents (with latest Bildungsgang per student)
+                            if (DatStudents != null && DatStudents.Count > 0)
+                            {
+                                result.MessageHtml += $"<pre>Processing {DatStudents.Count} DatStudents...</pre>";
+                                Console.WriteLine($"ProcessWebuntis: Processing {DatStudents.Count} DatStudents for CSV...");
+                                try
+                                {
+                                    foreach (var student in DatStudents)
+                                    {
+                                        // Pick the latest Bildungsgang by BeginnBildungsgang date
+                                        var latestBg = student.Bildungsgaenge?.OrderByDescending(b =>
+                                        {
+                                            var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                                            if (DateTime.TryParseExact(b.BeginnBildungsgang, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+                                                return dt;
+                                            return DateTime.MinValue;
+                                        }).FirstOrDefault();
 
-                        // Build target list strictly from SchuelerBasisdaten: include only status 2 or 6, deduplicate by name+birthdate
+                                        var email = student.MailSchulisch;
+                                        var familienname = student.Nachname;
+                                        var vorname = student.Vorname;
+                                        var klasse = latestBg?.Klasse ?? student.Klasse;
+                                        var kurzname = !string.IsNullOrWhiteSpace(email) && email.Contains('@') ? email.Split('@')[0] : string.Empty;
+                                        var geschlecht = student.Geschlecht?.ToUpperInvariant() ?? string.Empty;
+                                        var geburtsdatum = student.Geburtsdatum;
+                                        var eintrittsdatum = string.Empty;
+                                        var austrittsdatum = string.Empty;
+                                        var telefon = student.Telefon;
+                                        var mobil = student.Mobil;
+                                        var strasse = student.Strasse;
+                                        var plz = student.PLZ;
+                                        var ort = student.Ort;
+                                        var volljaehrig = student.Volljaehrig ? "1" : "0";
+
+                                        var erzName = string.Empty;
+                                        var erzMobil = string.Empty;
+                                        var erzTelefon = string.Empty;
+                                        if (student.Erziehers != null && student.Erziehers.Any())
+                                        {
+                                            var erz = student.Erziehers.FirstOrDefault();
+                                            if (erz != null)
+                                            {
+                                                var v1 = erz.Vorname1 ?? string.Empty;
+                                                var n1 = erz.Nachname1 ?? string.Empty;
+                                                var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
+                                                if (!string.IsNullOrWhiteSpace(combined)) erzName = combined;
+                                                erzMobil = erz.Email ?? string.Empty;
+                                                erzTelefon = erz.Telefon ?? string.Empty;
+                                            }
+                                        }
+
+                                        var betrName = string.Empty;
+                                        var betrStr = string.Empty;
+                                        var betrPlz = string.Empty;
+                                        var betrOrt = string.Empty;
+                                        var betrTel = string.Empty;
+                                        var betrTel2 = string.Empty;
+                                        var betrMail = string.Empty;
+                                        var betrBetreuer = string.Empty;
+                                        var schildAddrId = string.Empty;
+                                        if (student.Adresses != null && student.Adresses.Any())
+                                        {
+                                            var ad = student.Adresses.FirstOrDefault();
+                                            if (ad != null)
+                                            {
+                                                betrName = ad.Name1 ?? string.Empty;
+                                                betrStr = ad.Strasse ?? string.Empty;
+                                                betrPlz = ad.PLZ ?? string.Empty;
+                                                betrOrt = ad.Ort ?? string.Empty;
+                                                betrTel = ad.Telefon ?? string.Empty;
+                                                betrTel2 = ad.Telefon2 ?? string.Empty;
+                                                betrMail = ad.Mail ?? string.Empty;
+                                                var anrede = ad.BetreuerAnrede ?? string.Empty;
+                                                var bv = ad.BetreuerVorname ?? string.Empty;
+                                                var bn = ad.BetreuerNachname ?? string.Empty;
+                                                betrBetreuer = (string.IsNullOrWhiteSpace(anrede) ? string.Empty : anrede + " ") + (string.IsNullOrWhiteSpace(bv) ? string.Empty : bv + " ") + (bn ?? string.Empty);
+                                                betrBetreuer = betrBetreuer.Trim();
+                                                schildAddrId = ad.SchildAdressId ?? string.Empty;
+                                            }
+                                        }
+
+                                        var o365 = email ?? string.Empty;
+                                        var benutzer = string.Empty;
+                                        if (!string.IsNullOrWhiteSpace(o365) && o365.Contains('@')) benutzer = o365.Split('@')[0];
+
+                                        var row = new List<string>
+                                        {
+                                            EscapeCsv(email), EscapeCsv(familienname), EscapeCsv(vorname), EscapeCsv(klasse), EscapeCsv(kurzname), EscapeCsv(geschlecht), EscapeCsv(geburtsdatum), EscapeCsv(eintrittsdatum), EscapeCsv(austrittsdatum),
+                                            EscapeCsv(telefon), EscapeCsv(mobil), EscapeCsv(strasse), EscapeCsv(plz), EscapeCsv(ort), EscapeCsv(erzName), EscapeCsv(erzMobil), EscapeCsv(erzTelefon), EscapeCsv(volljaehrig),
+                                            EscapeCsv(betrName), EscapeCsv(betrStr), EscapeCsv(betrPlz), EscapeCsv(betrOrt), EscapeCsv(betrTel), EscapeCsv(betrTel2), EscapeCsv(betrMail), EscapeCsv(betrBetreuer), EscapeCsv(schildAddrId),
+                                            EscapeCsv(o365), EscapeCsv(benutzer)
+                                        };
+
+                                        swt.WriteLine(string.Join(',', row));
+                                        targetRowsWritten++;
+                                        Console.WriteLine($"ProcessWebuntis: Row written for {familienname}, {vorname}. Total rows: {targetRowsWritten}");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"ProcessWebuntis: Exception in DatStudents loop: {ex}");
+                                    result.MessageHtml += $"<pre>Error in DatStudents loop: {System.Net.WebUtility.HtmlEncode(ex.Message)}</pre>";
+                                }
+                            }
+                        else
+                        {
+                            // Fallback: use original basis-record based logic if DatStudents is empty
+
                         var targetBases = new List<Dictionary<string,string>>();
                         try
                         {
-                            var basisSelected = basisRecords.Where(b =>
-                            {
-                                var st = GetDictValue(b, "Status", "status");
-                                return st == "2" || st == "6";
-                            }).ToList();
+                            // Include all basis records, not just those with specific status values
+                            // The filtering will happen at the row level if needed
+                            var basisSelected = basisRecords; // Use ALL records, not just status 2 or 6
 
                             // group duplicates by Nachname|Vorname|Geburtsdatum
                             var grouped = basisSelected.GroupBy(b => (GetDictValue(b, "Nachname") + "|" + GetDictValue(b, "Vorname") + "|" + GetDictValue(b, "Geburtsdatum")).ToLowerInvariant());
@@ -670,9 +846,7 @@ public partial class FileProcessingService
                             int alter = -1; DateTime dtb; var formats2 = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
                             if (DateTime.TryParseExact(geburtsdatum, formats2, CultureInfo.InvariantCulture, DateTimeStyles.None, out dtb)) { alter = DateTime.Now.Year - dtb.Year; if (DateTime.Now < dtb.AddYears(alter)) alter--; }
 
-                            // only include if status 2 or 6
-                            if (!(status == "2" || status == "6")) continue;
-
+                            // Export all students regardless of status
                             var email = sz != null ? GetDictValue(sz, "schulische E-Mail", "MailSchulisch", "E-Mail") : string.Empty;
                             var klasse = GetDictValue(b, "Klasse", "klasse", "Klasse.name");
                             var kurzname = !string.IsNullOrWhiteSpace(email) && email.Contains('@') ? email.Split('@')[0] : string.Empty;
@@ -681,7 +855,7 @@ public partial class FileProcessingService
                             var austrittsdatum = status == "2" || status == "6" ? "31.07." + aktSj1 : (sz != null ? GetDictValue(sz, "Entlassdatum") : string.Empty);
                             var telefon = sz != null ? GetDictValue(sz, "Telefon-Nr.", "Telefon") : string.Empty;
                             var mobil = string.Empty;
-                            var strasse = GetDictValue(b, "Straße", "Strasse", "street");
+                            var strasse = GetDictValue(b, "Straï¿½e", "Strasse", "street");
                             var plz = GetDictValue(b, "PLZ", "Postleitzahl");
                             var ort = GetDictValue(b, "Ort");
 
@@ -690,7 +864,7 @@ public partial class FileProcessingService
                             {
                                 var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
                                 var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
-                                var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
+                                var streetErz = GetDictValue(erz, "Straï¿½e", "Strasse", "street");
                                 var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                                 if (!string.IsNullOrWhiteSpace(combined)) erzName = !string.IsNullOrWhiteSpace(streetErz) ? combined + ", " + streetErz : combined;
                                 erzMobil = GetDictValue(erz, "E-Mail 1. Person", "E-Mail", "Email");
@@ -698,7 +872,7 @@ public partial class FileProcessingService
                             }
 
                             var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
-                            var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
+                            var betrStr = ad != null ? GetDictValue(ad, "Straï¿½e", "Strasse", "street") : string.Empty;
                             var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
                             var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
                             var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
@@ -722,17 +896,24 @@ public partial class FileProcessingService
                             swt.WriteLine(string.Join(',', row));
                             targetRowsWritten++;
                         }
+                        }  // end else (fallback to basis records)
                     }
 
                     msTarget.Position = 0;
                     targetBytes = msTarget.ToArray();
+                    Console.WriteLine($"ProcessWebuntis: Generated {targetRowsWritten} rows, {targetBytes.Length} bytes");
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ProcessWebuntis CSV generation error: {ex}");
+            }
             // If the generation produced no rows (e.g. students present but filtered out),
             // fall back to using basisRecords as source so an import file is produced.
             if (targetRowsWritten == 0 && (basisRecords != null && basisRecords.Any()))
             {
+                result.MessageHtml += $"<pre>Fallback: Processing {basisRecords.Count} basisRecords because main process wrote 0 rows...</pre>";
+                Console.WriteLine($"ProcessWebuntis Fallback: DatStudents empty or wrote 0 rows. Using {basisRecords?.Count ?? 0} basisRecords");
                 try
                 {
                     using var msTarget2 = new System.IO.MemoryStream();
@@ -740,6 +921,7 @@ public partial class FileProcessingService
                     using (var swt2 = new System.IO.StreamWriter(msTarget2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
                     {
                         swt2.WriteLine(string.Join(',', targetHeaders));
+                        Console.WriteLine($"ProcessWebuntis Fallback: CSV header written");
                         foreach (var b in basisRecords)
                         {
                             // map basis record to target columns, but prefer values from zusatz/adressen when available
@@ -786,7 +968,7 @@ public partial class FileProcessingService
                             var adMatch = adressenRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                             string telefon = GetDictValue(adMatch, "Telefon-Nr.", "Telefon") ?? GetDictValue(b, "Telefon-Nr.", "Telefon");
                             string mobil = GetDictValue(adMatch, "Mobil", "Fax/Mobilnr") ?? string.Empty;
-                            string strasse = GetDictValue(adMatch, "Straße", "Strasse", "street") ?? GetDictValue(b, "Straße", "Strasse", "street");
+                            string strasse = GetDictValue(adMatch, "Straï¿½e", "Strasse", "street") ?? GetDictValue(b, "Straï¿½e", "Strasse", "street");
                             string plz = GetDictValue(adMatch, "PLZ", "Postleitzahl") ?? GetDictValue(b, "PLZ", "Postleitzahl");
                             string ort = GetDictValue(adMatch, "Ort") ?? GetDictValue(b, "Ort");
 
@@ -814,7 +996,7 @@ public partial class FileProcessingService
                                     {
                                         var v1 = GetDictValue(erzMatch, "Vorname 1.Person", "Vorname 1", "Vorname");
                                         var n1 = GetDictValue(erzMatch, "Nachname 1.Person", "Nachname 1", "Nachname");
-                                        var streetErz = GetDictValue(erzMatch, "Straße", "Strasse", "street");
+                                        var streetErz = GetDictValue(erzMatch, "Straï¿½e", "Strasse", "street");
                                         var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                                         if (!string.IsNullOrWhiteSpace(combined))
                                         {
@@ -830,7 +1012,7 @@ public partial class FileProcessingService
 
                             // company fields: prefer SchuelerAdressen (adMatch)
                             string betrName = GetDictValue(adMatch, "Name1", "Name");
-                            string betrStr = GetDictValue(adMatch, "Straße", "Strasse", "street");
+                            string betrStr = GetDictValue(adMatch, "Straï¿½e", "Strasse", "street");
                             string betrPlz = GetDictValue(adMatch, "PLZ");
                             string betrOrt = GetDictValue(adMatch, "Ort");
                             string betrTel = GetDictValue(adMatch, "1. Tel.-Nr.", "Telefon");
@@ -888,6 +1070,7 @@ public partial class FileProcessingService
 
                             swt2.WriteLine(string.Join(',', record));
                             fallbackRows++;
+                            Console.WriteLine($"ProcessWebuntis Fallback: Row written for {familienname}, {vorname}. Total rows: {fallbackRows}");
                         }
                         swt2.Flush();
                         msTarget2.Position = 0;
@@ -895,18 +1078,45 @@ public partial class FileProcessingService
                     targetBytes = msTarget2.ToArray();
                     targetRowsWritten = fallbackRows;
                     result.MessageHtml += $"<pre>Fallback: used basisRecords to produce {fallbackRows} rows.</pre>";
+                    Console.WriteLine($"ProcessWebuntis Fallback: Generated {fallbackRows} rows, {targetBytes.Length} bytes");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"ProcessWebuntis Fallback error: {ex}");
+                }
+            }
+
+            // Only add the output file if it has actual data rows (not just the header)
+            if (targetRowsWritten > 0 && targetBytes != null && targetBytes.Length > 0)
+            {
+                // Zeilenzahl = data rows + 1 (header)
+                int totalLines = targetRowsWritten + 1;
+                result.OutputFiles.Add(new OutputFile 
+                { 
+                    FileName = "ImportNachWebuntis-Stammdaten-Schueler.csv", 
+                    Content = targetBytes, 
+                    Hint = "Import nach Webuntis (CSV)",
+                    LineCount = totalLines,
+                    FileSize = targetBytes.Length
+                });
+                StoreFile("import_webuntis_students", targetBytes);
+                result.Success = true; // Explicitly mark as success when files are created
+                Console.WriteLine($"ProcessWebuntis: OutputFile added successfully. targetRowsWritten={targetRowsWritten}, targetBytes.Length={targetBytes.Length}");
+                try
+                {
+                    result.MessageHtml += $"<pre>âœ“ ImportNachWebuntis-Stammdaten-Schueler.csv erstellt mit {targetRowsWritten} Zeilen ({targetBytes.Length} Bytes)</pre>";
+                    result.MessageHtml += $"<pre>Export rows (students file): {studentsRowsWritten}, (ImportNachWebuntis rows): {targetRowsWritten}</pre>";
+                    try { result.MessageHtml += $"<pre>uniqueStudents: {uniqueStudents?.Count ?? 0}, students: {students?.Count ?? 0}, basisRecords: {basisRecords?.Count ?? 0}</pre>"; } catch { }
                 }
                 catch { }
             }
-
-            result.OutputFiles.Add(new OutputFile { FileName = "ImportNachWebuntis-Stammdaten-Schueler.csv", Content = targetBytes, Hint = "Import nach Webuntis (CSV)" });
-            StoreFile("import_webuntis_students", targetBytes);
-            try
+            else
             {
-                result.MessageHtml += $"<pre>Export rows (students file): {studentsRowsWritten}, (ImportNachWebuntis rows): {targetRowsWritten}</pre>";
-                try { result.MessageHtml += $"<pre>uniqueStudents: {uniqueStudents?.Count ?? 0}, students: {students?.Count ?? 0}, basisRecords: {basisRecords?.Count ?? 0}</pre>"; } catch { }
+                result.Success = false;
+                result.Message = "Keine Daten zum Exportieren gefunden. Bitte Ã¼berprÃ¼fen Sie die hochgeladenen Dateien (insbesondere SchuelerBasisdaten.dat).";
+                result.MessageHtml += $"<pre>âš  Keine Ausgabedaten erstellt. targetRowsWritten: {targetRowsWritten}, targetBytes.Length: {targetBytes?.Length ?? 0}</pre>";
+                Console.WriteLine($"ProcessWebuntis: No output file added. targetRowsWritten={targetRowsWritten}, targetBytes.Length={targetBytes?.Length ?? 0}");
             }
-            catch { }
         }
         catch (Exception ex)
         {
@@ -993,13 +1203,13 @@ public partial class FileProcessingService
                 }
                 if (admatch != null)
                 {
-                    s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
+                    s.Strasse = GetDictValue(admatch, "Straï¿½e", "Strasse", "street");
                     s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
                     s.Ort = GetDictValue(admatch, "Ort");
                 }
                 // fallback to primary basis values if still empty
                 if (string.IsNullOrWhiteSpace(s.MailSchulisch)) s.MailSchulisch = GetDictValue(primary, "MailSchulisch", "schulische E-Mail", "E-Mail", "Email");
-                if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Straße", "Strasse", "street");
+                if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Straï¿½e", "Strasse", "street");
                 if (string.IsNullOrWhiteSpace(s.PLZ)) s.PLZ = GetDictValue(primary, "PLZ", "Postleitzahl");
                 if (string.IsNullOrWhiteSpace(s.Ort)) s.Ort = GetDictValue(primary, "Ort");
             }
@@ -1056,7 +1266,7 @@ public partial class FileProcessingService
                 {
                     var a = new Models.Adresse();
                     a.Name1 = GetDictValue(ad, "Name1", "Name");
-                    a.Strasse = GetDictValue(ad, "Straße", "Strasse", "street");
+                    a.Strasse = GetDictValue(ad, "Straï¿½e", "Strasse", "street");
                     a.PLZ = GetDictValue(ad, "PLZ", "Postleitzahl");
                     a.Ort = GetDictValue(ad, "Ort");
                     a.Telefon = GetDictValue(ad, "1. Tel.-Nr.", "Telefon");
@@ -1085,7 +1295,7 @@ public partial class FileProcessingService
                     e.Nachname1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
                     e.Telefon = GetDictValue(erz, "Telefon", "Telefon-Nr.");
                     e.Email = GetDictValue(erz, "E-Mail", "Email");
-                    e.Strasse = GetDictValue(erz, "Straße", "Strasse", "street");
+                    e.Strasse = GetDictValue(erz, "Straï¿½e", "Strasse", "street");
                     foreach (var kv in erz) if (!e.AdditionalFields.ContainsKey(kv.Key)) e.AdditionalFields[kv.Key] = kv.Value;
                     // avoid exact duplicates by email+telefon
                     if (!s.Erziehers.Any(x => !string.IsNullOrWhiteSpace(e.Email) && x.Email == e.Email))
@@ -1131,6 +1341,46 @@ public partial class FileProcessingService
         }
 
         return list;
+    }
+
+    // Public helper to build students from a stored students CSV file
+    public List<Models.Student>? BuildStudentsFromStoredStudentsCsv()
+    {
+        var studentsBytes = GetFile("students");
+        if (studentsBytes == null) return null;
+
+        try
+        {
+            var (enc, _) = ResolveEncodingForReader(studentsBytes, null);
+            var text = enc.GetString(studentsBytes);
+            if (!string.IsNullOrEmpty(text) && text[0] == '\uFEFF') text = text.Substring(1);
+            var lines = text.Split('\n').Select(l => l.TrimEnd('\r')).ToList();
+            var hdrIdx = lines.FindIndex(l => !string.IsNullOrWhiteSpace(l));
+            
+            if (hdrIdx < 0) return new List<Models.Student>();
+            
+            var records = new List<Dictionary<string, string>>();
+            var hdr = SplitRow(lines[hdrIdx], DetermineDelimiter(studentsBytes, "\t"), null);
+            
+            for (int i = hdrIdx + 1; i < lines.Count; i++)
+            {
+                var line = lines[i];
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var fields = SplitRow(line, DetermineDelimiter(studentsBytes, "\t"), null);
+                var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                for (int c = 0; c < hdr.Length; c++)
+                {
+                    dict[hdr[c].Trim()] = c < fields.Length ? fields[c] : string.Empty;
+                }
+                records.Add(dict);
+            }
+            
+            return BuildTypedStudentsFromStudentCsv(records);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     // Public helper to build students from files previously stored via StoreFile

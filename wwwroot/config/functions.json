@@ -136,7 +136,8 @@
         { "fileKey": "webuntis_companies", "fileName": "Webuntis-Stammdaten-Betriebe.csv", "hint": "Webuntis: Stammdaten Betriebe" },
         { "fileKey": "webuntis_staff", "fileName": "Webuntis-Stammdaten-Erzieher.csv", "hint": "Webuntis: Stammdaten Erzieher/Personal" },
         { "fileKey": "littera_import", "fileName": "ImportNachLittera.xml", "hint": "Littera Import (XML)" },
-        { "fileKey": "netman_import", "fileName": "ImportNachNetman.csv", "hint": "Netman Import (CSV)" }
+        { "fileKey": "netman_import", "fileName": "ImportNachNetman.csv", "hint": "Netman Import (CSV)" },
+        { "fileKey": "import_webuntis_students", "fileName": "ImportNachWebuntis-Stammdaten-Schueler.csv", "hint": "Webuntis Import (CSV)" }
       ],
       "testFiles": [
         "/testfiles/webuntis/Fall_1_Student_Mehrfach_vorkommender_Böhm_wird_gefiltert.csv",

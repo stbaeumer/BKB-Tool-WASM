@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
+  </ItemGroup>
+
+  <!-- Link gemeinsame Quellcodes aus dem Client-Projekt, damit Änderungen überall gelten -->
+  <ItemGroup>
+    <Compile Include="../Models/FunctionConfig.cs" Link="Models/FunctionConfig.cs" />
+    <Compile Include="../Models/FunctionType.cs" Link="Models/FunctionType.cs" />
+    <Compile Include="../Models/Student.cs" Link="Models/Student.cs" />
+
+    <Compile Include="../Services/FileProcessingService.cs" Link="Services/FileProcessingService.cs" />
+    <Compile Include="../Services/FileProcessingService.MailadresseSetzen.cs" Link="Services/FileProcessingService.MailadresseSetzen.cs" />
+    <Compile Include="../Services/FileProcessingService.Webuntis.cs" Link="Services/FileProcessingService.Webuntis.cs" />
+  </ItemGroup>
+
+</Project>

@@ -92,4 +92,10 @@ public class OutputFile
     public byte[] Content { get; set; } = Array.Empty<byte>();
     public string? Hint { get; set; }
     public string? ProcessingHint { get; set; }
+    // Metadaten zur Anzeige in der UI
+    public int LineCount { get; set; } = 0; // Zeilenzahl (nur für CSV)
+    public long FileSize { get; set; } = 0; // Dateigröße in Bytes
+
+    // Formatierte Anzeigen
+    public string FormattedSize => FileSize >= 1024 * 1024 ? $"{FileSize / (1024 * 1024)} MB" : FileSize >= 1024 ? $"{FileSize / 1024} KB" : $"{FileSize} B";
 }

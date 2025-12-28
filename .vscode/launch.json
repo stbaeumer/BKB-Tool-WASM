@@ -2,12 +2,26 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Open in Browser (Container)",
-      "type": "node",
+      "name": "Run Dev Server (coreclr)",
+      "type": "coreclr",
       "request": "launch",
-      "program": "${workspaceFolder}/bin/Debug/net10.0/BKBToolClient.dll",
-      "preLaunchTask": "run-dev-server",
+      "preLaunchTask": "build-wasm",
+      "program": "dotnet",
+      "args": [
+        "run",
+        "--configuration",
+        "Debug"
+      ],
+      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
+      "env": {
+        "ASPNETCORE_URLS": "http://127.0.0.1:5000"
+      },
+      "serverReadyAction": {
+        "pattern": "App url:\\s+http://127\\.0\\.0\\.1:(\\d+)/",
+        "uriFormat": "http://127.0.0.1:%s/",
+        "action": "openExternally"
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -15,11 +29,32 @@
       }
     },
     {
-      "name": "Attach Debugger",
+      "name": "Run ConsoleApp",
       "type": "coreclr",
-      "request": "attach",
-      "processId": "${command:pickProcess}",
-      "preLaunchTask": "run-dev-server"
+      "request": "launch",
+      "preLaunchTask": "build-console",
+      "program": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/ConsoleApp/BKBToolConsole.csproj"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Web + Console",
+      "configurations": [
+        "Run Dev Server (coreclr)",
+        "Run ConsoleApp"
+      ]
     }
   ]
 }

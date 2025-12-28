@@ -6,7 +6,6 @@ using System.Text;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Text.RegularExpressions;
 
 namespace BKBToolClient.Services;
 
@@ -14,8 +13,10 @@ public partial class FileProcessingService
 {
     private readonly ConcurrentDictionary<string, byte[]> _sessionFiles = new();
     private readonly string _sessionId = Guid.NewGuid().ToString();
+    private List<Models.Student>? _lastCsvStudents = null;
 
     public string SessionId => _sessionId;
+    public List<Models.Student>? GetLastCsvStudents() => _lastCsvStudents;
 
     public void StoreFile(string key, byte[] content) => _sessionFiles[key] = content;
 

@@ -1,0 +1,15 @@
+/workspaces/BKB-Tool-WASM/ConsoleApp/bin/Debug/net10.0/BKBToolConsole
+/workspaces/BKB-Tool-WASM/ConsoleApp/bin/Debug/net10.0/BKBToolConsole.deps.json
+/workspaces/BKB-Tool-WASM/ConsoleApp/bin/Debug/net10.0/BKBToolConsole.runtimeconfig.json
+/workspaces/BKB-Tool-WASM/ConsoleApp/bin/Debug/net10.0/BKBToolConsole.dll
+/workspaces/BKB-Tool-WASM/ConsoleApp/bin/Debug/net10.0/BKBToolConsole.pdb
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.AssemblyInfoInputs.cache
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.AssemblyInfo.cs
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.csproj.CoreCompileInputs.cache
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.sourcelink.json
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.dll
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/refint/BKBToolConsole.dll
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.pdb
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/BKBToolConsole.genruntimeconfig.cache
+/workspaces/BKB-Tool-WASM/ConsoleApp/obj/Debug/net10.0/ref/BKBToolConsole.dll

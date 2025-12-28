@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "dgSpecHash": "LXNWTC88Gos=",
+  "success": true,
+  "projectFilePath": "/workspaces/BKB-Tool-WASM/ConsoleApp/BKBToolConsole.csproj",
+  "expectedPackageFiles": [
+    "/home/codespace/.nuget/packages/system.text.encoding.codepages/7.0.0/system.text.encoding.codepages.7.0.0.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "message": "PackageReference System.Text.Encoding.CodePages will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.",
+      "projectPath": "/workspaces/BKB-Tool-WASM/ConsoleApp/BKBToolConsole.csproj",
+      "warningLevel": 1,
+      "filePath": "/workspaces/BKB-Tool-WASM/ConsoleApp/BKBToolConsole.csproj",
+      "libraryId": "System.Text.Encoding.CodePages",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}

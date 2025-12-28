@@ -1,0 +1,178 @@
+@page "/downloads/{Id}"
+@using BKBToolClient.Models
+@inject FunctionConfigService ConfigService
+@inject FileProcessingService ProcessingService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@using System.Text.Json
+
+<div class="container mt-4">
+    @if (_config == null)
+    {
+        <div class="alert alert-danger">Unbekannte Funktion-ID: @Id</div>
+        <button class="btn btn-outline-secondary" @onclick="GoHome">← Zurück</button>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">@_config.Name</h4>
+                <button class="btn btn-sm btn-secondary" @onclick="GoHome">← Zurück</button>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">📥 Download-Dateien:</h5>
+                    <button class="btn btn-outline-primary btn-sm" @onclick="DownloadAll">⬇️ Alle herunterladen</button>
+                </div>
+
+                @if (_stats != null)
+                {
+                    <div class="alert alert-success d-flex align-items-center justify-content-between">
+                        <div>
+                            <strong>Vergleich CSV ↔ neue Daten:</strong>
+                            <span class="ms-2">Unverändert: @_stats.Unchanged</span>
+                            <span class="ms-3 text-success">Neu: @_stats.Added</span>
+                            <span class="ms-3 text-danger">Gelöscht: @_stats.Removed</span>
+                        </div>
+                        <span class="text-muted small">CSV: @_stats.CsvCount · Neu: @_stats.NewCount</span>
+                    </div>
+                }
+
+                @if (_files.Count == 0)
+                {
+                    <div class="alert alert-warning mb-0">Es wurden keine Ausgabedateien gefunden. Bitte führen Sie die Verarbeitung zuerst aus.</div>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var f in _files)
+                        {
+                            <div class="col-12">
+                                <div class="card border-success">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-1">📄 <strong>@f.FileName</strong></h6>
+                                                @if (!string.IsNullOrEmpty(f.Hint))
+                                                {
+                                                    <div class="text-muted small mb-2">@f.Hint</div>
+                                                }
+                                                <div class="d-flex gap-4 small text-muted">
+                                                    <div><span class="text-dark fw-semibold">Größe:</span> @FormatSize(f.Content?.Length ?? 0)</div>
+                                                    @if (f.Content != null)
+                                                    {
+                                                        <div><span class="text-dark fw-semibold">Zeilen:</span> @CountLines(f.Content)</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-success ms-3" @onclick="() => Download(f)">⬇️ Download</button>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(f.ProcessingHint))
+                                        {
+                                            <details class="mt-2">
+                                                <summary class="text-muted small" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
+                                                <div class="alert alert-info mt-2 small" style="white-space: pre-line; font-size: 0.85em;">@f.ProcessingHint</div>
+                                            </details>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private FunctionConfig? _config;
+    private List<OutputFile> _files = new();
+    private WebuntisStats? _stats;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var configs = await ConfigService.LoadFunctionsAsync();
+        _config = configs.FirstOrDefault(c => string.Equals(c.Id, Id, StringComparison.OrdinalIgnoreCase));
+        _files.Clear();
+        _stats = null;
+
+        var statsBytes = ProcessingService.GetFile("webuntis_stats");
+        if (statsBytes != null && statsBytes.Length > 0)
+        {
+            try { _stats = JsonSerializer.Deserialize<WebuntisStats>(statsBytes); } catch { _stats = null; }
+        }
+
+        if (_config?.OutputFiles != null)
+        {
+            foreach (var oc in _config.OutputFiles)
+            {
+                if (string.IsNullOrWhiteSpace(oc.FileKey)) continue;
+                var bytes = ProcessingService.GetFile(oc.FileKey);
+                if (bytes == null || bytes.Length == 0) continue;
+                _files.Add(new OutputFile
+                {
+                    FileName = string.IsNullOrWhiteSpace(oc.FileName) ? oc.FileKey : oc.FileName,
+                    Content = bytes,
+                    Hint = oc.Hint,
+                    ProcessingHint = oc.ProcessingHint
+                });
+            }
+        }
+    }
+
+    private void GoHome()
+    {
+        try { Nav.NavigateTo("/"); } catch { }
+    }
+
+    private async Task Download(OutputFile f)
+    {
+        try
+        {
+            var base64 = Convert.ToBase64String(f.Content);
+            await JS.InvokeVoidAsync("downloadFile", f.FileName, base64);
+        }
+        catch { }
+    }
+
+    private async Task DownloadAll()
+    {
+        try
+        {
+            foreach (var f in _files)
+            {
+                await Download(f);
+                // kleine Pause zwischen den Downloads, um Browser-Prompts zu erlauben
+                await Task.Delay(150);
+            }
+        }
+        catch { }
+    }
+
+    private static string FormatSize(int bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / (1024 * 1024)} MB";
+        if (bytes >= 1024) return $"{bytes / 1024} KB";
+        return $"{bytes} B";
+    }
+
+    private static int CountLines(byte[] content)
+    {
+        try
+        {
+            var text = System.Text.Encoding.UTF8.GetString(content);
+            var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var count = lines.Length;
+            return count > 0 ? count - 1 : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    private record WebuntisStats(int Unchanged, int Added, int Removed, int CsvCount, int NewCount);
+}

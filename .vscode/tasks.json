@@ -2,12 +2,38 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "build",
+      "label": "build-wasm",
       "command": "dotnet",
       "type": "shell",
       "args": [
         "build",
         "${workspaceFolder}/BKBToolClient.csproj"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build-console",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "build",
+        "${workspaceFolder}/ConsoleApp/BKBToolConsole.csproj"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "build",
+      "dependsOn": [
+        "build-wasm",
+        "build-console"
       ],
       "group": {
         "kind": "build",
@@ -15,6 +41,23 @@
       },
       "presentation": {
         "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "run-console-app",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/ConsoleApp/BKBToolConsole.csproj"
+      ],
+      "runOptions": {
+        "instanceLimit": 1
+      },
+      "presentation": {
+        "reveal": "always"
       },
       "problemMatcher": "$msCompile"
     },

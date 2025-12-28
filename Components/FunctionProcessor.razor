@@ -10,28 +10,45 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="mb-0">@Config.Name
-            @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
-            {
-                <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleFunctionHint" title="Informationen zur Funktion" aria-expanded="@_showFunctionHint" aria-controls="@("functionHint-" + Config.Id)">
-                    <i class="bi bi-info-circle text-muted" style="font-size:1rem;"></i>
-                </button>
-            }
-            @* summary shown below file list; moved further down so it's directly above the "Dateien erstellen" button *@
-
-
-
-            @if (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co")
-            {
-                <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleTestFiles" title="Testen Sie die Funktion mit diesen Testdateien" aria-pressed="@_showTestFiles" aria-label="Testdateien anzeigen">
-                    <i class="bi bi-bug text-muted" style="font-size:1rem;"></i>
-                </button>
-            }
-        </h4>
+        @if (Config != null)
+        {
+            <h4 class="mb-0">@Config.Name
+                @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
+                {
+                    <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleFunctionHint" title="Informationen zur Funktion" aria-expanded="@_showFunctionHint" aria-controls="@("functionHint-" + Config.Id)">
+                        <i class="bi bi-info-circle text-muted" style="font-size:1rem;"></i>
+                    </button>
+                }
+                @if (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co")
+                {
+                    <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleTestFiles" title="Testen Sie die Funktion mit diesen Testdateien" aria-pressed="@_showTestFiles" aria-label="Testdateien anzeigen">
+                        <i class="bi bi-bug text-muted" style="font-size:1rem;"></i>
+                    </button>
+                }
+            </h4>
+        }
+        else
+        {
+            <p class="alert alert-danger mb-0">Fehler: Keine Funktion ausgewählt!</p>
+        }
         <button class="btn btn-sm btn-secondary" @onclick="HandleBackClicked">← Zurück</button>
     </div>
 
 @code {
+    [Parameter] public FunctionConfig Config { get; set; } = null!;
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Config == null)
+        {
+            Console.WriteLine("Error: FunctionProcessor Config is null!");
+            return;
+        }
+        Reset();
+        base.OnParametersSet();
+    }
+
     private async Task DownloadAllOutputs()
     {
         try
@@ -48,130 +65,116 @@
     }
 }
     <div class="card-body">
-        @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
+        @if (Config != null)
         {
-            <div id="@($"functionHint-{Config.Id}")" role="region" class="collapsible-info @(_showFunctionHint ? "open" : "") mt-3">
-                <div class="alert alert-primary text-white" style="white-space: pre-line;">@Config.FunctionHint</div>
-            </div>
-        }
-        @if (!_isProcessing && _result == null && string.IsNullOrWhiteSpace(_previewHtml))
-        {
-            <h5>1. Dateien hochladen</h5>
-
-            <div id="dropzone-@Config.Id" class="dropzone-area mb-3" @ref="_dropzoneRef">
-                <div class="dropzone-instructions">Dateien hierher ziehen oder klicken, um auszuwählen</div>
-            </div>
-
-            @foreach (var file in Config.RequiredFiles.Concat(Config.OptionalFiles))
+            @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
             {
-                var localFile = file; // wichtig: lokale Variable pro Iteration
-                var fileClass = localFile.IsRequired ? "required-file" : localFile.IsOptional ? "optional-file" : "optional-file";
-                <div class="mb-3">
-                    <label class="form-label d-flex align-items-center @fileClass" @onclick="() => { if (!string.IsNullOrEmpty(localFile.SourceHint)) ToggleSourceHint(localFile.FileKey); }" title="@((!string.IsNullOrEmpty(localFile.SourceHint)) ? "Hinweise zu dieser Datei anzeigen" : "")" style="@((!string.IsNullOrEmpty(localFile.SourceHint)) ? "cursor:pointer;" : null)">
-                        <div class="me-2">
-                            @{
-                                // Prefer showing a concrete example filename if available.
-                                var displayName = !string.IsNullOrWhiteSpace(localFile.ExampleFileName)
-                                    ? localFile.ExampleFileName
-                                    : (localFile.AllowedExtensions != null && localFile.AllowedExtensions.Length == 1
-                                        ? localFile.Name + localFile.AllowedExtensions[0]
-                                        : localFile.Name);
-                            }
-                            @displayName
-                            @if (localFile.IsOptional)
+                <div id="@($"functionHint-{Config.Id}")" role="region" class="collapsible-info @(_showFunctionHint ? "open" : "") mt-3">
+                    <div class="alert alert-primary text-white" style="white-space: pre-line;">@Config.FunctionHint</div>
+                </div>
+            }
+            @if (!_isProcessing && _result == null && string.IsNullOrWhiteSpace(_previewHtml))
+            {
+                <h5>1. Dateien hochladen</h5>
+                
+                @if (_showTestFiles && (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co"))
+                {
+                    <div class="card mb-3 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">🧪 Testdateien</h6>
+                            @if (_loadingTestFiles)
                             {
-                                <span class="badge bg-secondary ms-2">Optional</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <div class="text-muted">Testdateien werden geladen…</div>
+                                </div>
                             }
-                            @* If there are multiple allowed extensions, show them as a hint; otherwise omit the verbose label. *@
-                            @if (localFile.AllowedExtensions != null && localFile.AllowedExtensions.Length > 1)
+                            else if (!string.IsNullOrWhiteSpace(_testFilesError))
                             {
-                                <small class="text-muted ms-2">Erlaubte Formate: @string.Join(", ", localFile.AllowedExtensions)</small>
+                                <div class="alert alert-danger mb-0">
+                                    <strong>Fehler beim Laden der Testdateien:</strong>
+                                    <div class="small">@_testFilesError</div>
+                                </div>
                             }
-                        </div>
-
-                        <div class="ms-auto d-flex align-items-center">
-                            @if (localFile.IsUploaded)
+                            else if (_testFiles == null || !_testFiles.Any())
                             {
-                                <span class="badge bg-success me-2">✓</span>
-                                <small class="text-muted d-none d-md-inline">@localFile.FileName</small>
+                                <div class="text-muted">Keine Testdateien gefunden.</div>
                             }
                             else
                             {
-                                <span class="badge bg-danger me-2">✗</span>
+                                <div class="mb-2 d-flex justify-content-end">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="DownloadAllTestFiles">⬇️ Alle herunterladen</button>
+                                </div>
+                                <ul class="list-group mb-0">
+                                    @foreach (var tf in _testFiles)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                                            <div class="ms-2 me-auto">
+                                                <div class="fw-bold">@tf.Name</div>
+                                                <div class="small text-muted">@tf.SizeDisplay @((!string.IsNullOrWhiteSpace(tf.SizeDisplay) && !string.IsNullOrWhiteSpace(tf.LastModifiedDisplay)) ? "•" : "") @tf.LastModifiedDisplay</div>
+                                            </div>
+                                            <div>
+                                                <a class="btn btn-sm btn-outline-secondary me-2" href="@tf.Url" download>🡇</a>
+                                                <a class="btn btn-sm btn-link" target="_blank" href="@tf.Url">↗</a>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
                             }
-
-                            @* Hinweise werden jetzt beim Anklicken der ganzen Zeile angezeigt; separater Info‑Button entfernt. *@
                         </div>
-                    </label>
+                    </div>
+                }
 
-                    @if (!string.IsNullOrEmpty(localFile.SourceHint) && _visibleSourceHints.Contains(localFile.FileKey))
-                    {
-                        <div class="alert alert-info mt-2" style="white-space: pre-line; font-size: 0.9em;">@localFile.SourceHint</div>
-                    }
-
-                    @if (localFile.IsUploaded)
-                    {
-                        <div class="small text-success mt-1">
-                            @($"Erfolgreich hochgeladen: {localFile.LineCount} Zeilen, {localFile.ColumnCount} Spalten{(string.IsNullOrWhiteSpace(localFile.LastModifiedDisplay) ? "" : ", " + localFile.LastModifiedDisplay)}")
-                        </div>
-                    }
-
-                    @if (_validationErrors.ContainsKey($"file_{localFile.FileKey}"))
-                    {
-                        <div class="invalid-feedback d-block">
-                            ❌ @_validationErrors[$"file_{localFile.FileKey}"]
-                        </div>
-                    }
-                </div>
-            }
-
-            @if ((Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co") && _showTestFiles)
-            {
-                <div class="mb-3 mt-2">
-                    <div class="card card-body mt-2 testfiles-panel">
-                        <div class="mb-2">Mit folgenden Beispieldateien können Sie BKB-Tool testen.</div>
-
-                        @if (_loadingTestFiles)
-                        {
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                <div class="text-muted">Testdateien werden geladen…</div>
-                            </div>
-                        }
-                        else if (!string.IsNullOrWhiteSpace(_testFilesError))
-                        {
-                            <div class="alert alert-danger mb-0">
-                                <strong>Fehler beim Laden der Testdateien:</strong>
-                                <div class="small">@_testFilesError</div>
-                            </div>
-                        }
-                        else if (_testFiles == null || !_testFiles.Any())
-                        {
-                            <div class="text-muted">Keine Testdateien gefunden.</div>
-                        }
-                        else
-                        {
-                            <div class="mb-2 d-flex justify-content-end">
-                                <button class="btn btn-sm btn-outline-primary" @onclick="DownloadAllTestFiles">⬇️ Alle herunterladen</button>
-                            </div>
-                            <ul class="list-group mb-0">
-                                @foreach (var tf in _testFiles)
-                                {
-                                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                                        <div class="ms-2 me-auto">
-                                            <div class="fw-bold">@tf.Name</div>
-                                            <div class="small text-muted">@tf.SizeDisplay @((!string.IsNullOrWhiteSpace(tf.SizeDisplay) && !string.IsNullOrWhiteSpace(tf.LastModifiedDisplay)) ? "•" : "") @tf.LastModifiedDisplay</div>
-                                        </div>
-                                        <div>
-                                            <a class="btn btn-sm btn-outline-secondary me-2" href="@tf.Url" download>🡇</a>
-                                            <a class="btn btn-sm btn-link" target="_blank" href="@tf.Url">↗</a>
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        }
+                <div class="dropzone mb-3" @ref="_dropzoneRef" id="@($"dropzone-{Config.Id}")">
+                    <div class="dropzone-inner">
+                        <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                        <p class="mb-1">Dateien hierher ziehen oder klicken zum Auswählen</p>
+                        <small class="text-muted">Unterstützte Formate: @GetSupportedFormats()</small>
                     </div>
                 </div>
+
+                @foreach (var file in Config.RequiredFiles.Concat(Config.OptionalFiles))
+                {
+                    <div class="card mb-3 @(file.IsUploaded ? "border-success" : (file.IsOptional ? "border-secondary" : "border-primary"))">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        @file.Name
+                                        @if (file.IsOptional)
+                                        {
+                                            <span class="badge bg-secondary ms-2">Optional</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(file.SourceHint))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="() => ToggleSourceHint(file.FileKey)" title="Woher bekomme ich diese Datei?" aria-expanded="@(_visibleSourceHints.Contains(file.FileKey))" aria-controls="@($"sourceHint-{file.FileKey}")">
+                                                <i class="bi bi-question-circle text-muted" style="font-size:0.9rem;"></i>
+                                            </button>
+                                        }
+                                    </h6>
+                                </div>
+                                @if (file.IsUploaded)
+                                {
+                                    <span class="badge bg-success">✓ Hochgeladen</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(file.SourceHint) && _visibleSourceHints.Contains(file.FileKey))
+                            {
+                                <div id="@($"sourceHint-{file.FileKey}")" class="alert alert-info small mb-2" style="white-space: pre-line;">@file.SourceHint</div>
+                            }
+                            @if (file.IsUploaded)
+                            {
+                                <div class="text-success small mt-2">
+                                    📄 @file.FileName
+                                    @if (file.LineCount > 0)
+                                    {
+                                        <span class="ms-2">(@file.LineCount Zeilen, @file.ColumnCount Spalten)</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
             }
 
             @* summary directly above the Dateien erstellen button *@
@@ -290,6 +293,7 @@
         }
         else if (_isProcessing)
         {
+            Console.WriteLine($"Progress bar block: _isProcessing={_isProcessing}, _result={_result != null}");
             <div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
                 <div class="mb-4 text-center">
                     <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
@@ -342,6 +346,7 @@
         }
         else if (_result != null)
         {
+            Console.WriteLine($"Result display block: _result != null, OutputFiles={_result.OutputFiles?.Count ?? 0}, _isProcessing={_isProcessing}");
             <div class="alert @(_result.Success ? "alert-success" : "alert-danger") d-flex align-items-center">
                 <span class="me-2">@(_result.Success ? "✓" : "✗")</span>
                 <div>
@@ -356,40 +361,60 @@
                 </div>
             </div>
 
-            @if (_result.Success && _result.OutputFiles.Any())
+            @if (_result.OutputFiles != null && _result.OutputFiles.Any())
             {
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0">📥 Download-Dateien:</h5>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary me-2" @onclick="DownloadAllOutputs">⬇️ Alle herunterladen</button>
+                Console.WriteLine($"OutputFiles block: Rendering {_result.OutputFiles.Count} files");
+                <div class="mb-4">
+                    <h5 class="mb-3">📥 Download-Dateien:</h5>
+                    <div class="row g-3">
+                        @foreach (var output in _result.OutputFiles)
+                        {
+                            <div class="col-12">
+                                <div class="card border-success">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div class="flex-grow-1">
+                                                <h6 class="card-title mb-2">
+                                                    📄 <strong>@output.FileName</strong>
+                                                </h6>
+                                                @if (!string.IsNullOrEmpty(output.Hint))
+                                                {
+                                                    <p class="text-muted small mb-2">@output.Hint</p>
+                                                }
+                                                <div class="d-flex gap-4 small text-muted">
+                                                    <div>
+                                                        <span class="text-dark fw-semibold">Größe:</span>
+                                                        @output.FormattedSize
+                                                    </div>
+                                                    @if (output.LineCount > 0)
+                                                    {
+                                                        <div>
+                                                            <span class="text-dark fw-semibold">Zeilen:</span>
+                                                            @output.LineCount
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-success ms-3" @onclick="() => DownloadFile(output)">
+                                                ⬇️ Download
+                                            </button>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(output.ProcessingHint))
+                                        {
+                                            <details class="mt-2">
+                                                <summary class="text-muted small" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
+                                                <div class="alert alert-info mt-2 small" style="white-space: pre-line; font-size: 0.85em;">@output.ProcessingHint</div>
+                                            </details>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-primary btn-sm" @onclick="DownloadAllOutputs">⬇️ Alle herunterladen</button>
                     </div>
                 </div>
-                @foreach (var output in _result.OutputFiles)
-                {
-                    <div class="card mb-3 border-success">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <strong>📄 @output.FileName</strong>
-                                    @if (!string.IsNullOrEmpty(output.Hint))
-                                    {
-                                        <br /><small class="text-muted">@output.Hint</small>
-                                    }
-                                </div>
-                                <button class="btn btn-success" @onclick="() => DownloadFile(output)">
-                                    ⬇️ Download
-                                </button>
-                            </div>
-                            @if (!string.IsNullOrEmpty(output.ProcessingHint))
-                            {
-                                <details class="mt-2">
-                                    <summary class="text-muted" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
-                                    <div class="alert alert-info mt-2" style="white-space: pre-line; font-size: 0.9em;">@output.ProcessingHint</div>
-                                </details>
-                            }
-                        </div>
-                    </div>
-                }
             }
 
             <div class="d-flex gap-2 mt-4">
@@ -397,13 +422,15 @@
                 <button class="btn btn-outline-secondary" @onclick="HandleBackClicked">← Zurück zur Übersicht</button>
             </div>
         }
+        else
+        {
+            <div class="alert alert-danger">Fehler: Komponente nicht initialisiert.</div>
+        }
     </div>
 </div>
 
-@code {
-    [Parameter] public FunctionConfig Config { get; set; } = null!;
-    [Parameter] public EventCallback OnBack { get; set; }
 
+@code {
     private async Task HandleBackClicked()
     {
         // ensure UI state and stored bytes are cleared
@@ -445,6 +472,19 @@
     private bool _loadingTestFiles = false;
     private string? _testFilesError;
     private bool _onlyChanged = false;
+
+    private string GetSupportedFormats()
+    {
+        if (Config == null) return string.Empty;
+        var allExtensions = Config.RequiredFiles
+            .Concat(Config.OptionalFiles)
+            .SelectMany(f => f.AllowedExtensions)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(ext => ext.TrimStart('.').ToUpperInvariant())
+            .OrderBy(ext => ext)
+            .ToList();
+        return allExtensions.Any() ? string.Join(", ", allExtensions) : "Alle Formate";
+    }
 
     // UI state for function-level hint
     private bool _showFunctionHint = false;
@@ -606,12 +646,16 @@
         try
         {
             Console.WriteLine($"OnDropFile invoked: fileName={fileName}, base64Length={(base64?.Length ?? 0)}");
+            if (string.IsNullOrWhiteSpace(base64))
+            {
+                Console.WriteLine("OnDropFile: empty base64 payload received, skipping.");
+                return;
+            }
+
             var bytes = Convert.FromBase64String(base64);
             Console.WriteLine($"OnDropFile: decoded bytes={bytes.Length}");
-            // determine extension from dropped filename
             var ext = Path.GetExtension(fileName)?.ToLowerInvariant() ?? string.Empty;
 
-            // find matching required file by name (contains) and extension match (if specified)
             var match = Config.RequiredFiles.Concat(Config.OptionalFiles)
                 .FirstOrDefault(f =>
                 {
@@ -627,37 +671,48 @@
             match.Content = bytes;
             match.FileName = fileName;
             match.IsUploaded = true;
-            // analyze file for lines and columns using configured delimiter/quote/encoding
+
             var (lines, cols) = ProcessingService.AnalyzeFile(bytes, match.Delimiter ?? "\t", match.Quote ?? string.Empty, match.Encoding ?? "utf-8");
             match.LineCount = lines;
             match.ColumnCount = cols;
 
             ProcessingService.StoreFile(match.FileKey, bytes);
-            // try to (re)build typed students summary when files are uploaded via drop
             try
             {
                 _studentsSummaryError = null;
-                    var students = ProcessingService.BuildStudentsFromStoredFiles();
-                    _builtStudentsCount = students?.Count ?? 0;
-                    _statusCounts = students?.GroupBy(st => st.Status ?? string.Empty)
-                        .ToDictionary(g => string.IsNullOrWhiteSpace(g.Key) ? "(empty)" : g.Key, g => g.Count())
-                        ?? new Dictionary<string,int>();
-                    _statusSummary = BuildStatusSummary(_builtStudentsCount, _statusCounts);
-                    // Log students to console automatically so developer always sees them (sorted by Bildungsgaenge count)
-                    try
-                    {
-                        var decorated = students
-                            .Select(s => new { Student = s, BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0 })
-                            .OrderByDescending(x => x.BildungsgangeCount)
-                            .ThenBy(x => x.Student?.Nachname)
-                            .ThenBy(x => x.Student?.Vorname)
-                            .ToList();
-                        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
-                        var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
-                        await JS.InvokeVoidAsync("console.info", $"Students (sorted by Bildungsgänge): {decorated.Count} entries");
-                        await JS.InvokeVoidAsync("debugLogObject", json);
-                    }
-                    catch { }
+                var students = ProcessingService.BuildStudentsFromStoredFiles();
+                _builtStudentsCount = students?.Count ?? 0;
+                _statusCounts = students?.GroupBy(st => st.Status ?? string.Empty)
+                    .ToDictionary(g => string.IsNullOrWhiteSpace(g.Key) ? "(empty)" : g.Key, g => g.Count())
+                    ?? new Dictionary<string,int>();
+                _statusSummary = BuildStatusSummary(_builtStudentsCount, _statusCounts);
+
+                try
+                {
+                    var decorated = (students ?? Enumerable.Empty<Models.Student>())
+                        .Select(s => new { Student = s, BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0 })
+                        .OrderByDescending(x => x.BildungsgangeCount)
+                        .ThenBy(x => x.Student?.Nachname)
+                        .ThenBy(x => x.Student?.Vorname)
+                        .ToList();
+                    var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+                    var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
+                    await JS.InvokeVoidAsync("console.info", $"DatStudents (sorted by Bildungsgänge): {decorated.Count} entries");
+                    await JS.InvokeVoidAsync("debugLogObject", json);
+
+                    // Additionally log CsvStudents parsed directly from stored students CSV
+                    var csvStudents = ProcessingService.BuildStudentsFromStoredStudentsCsv() ?? new List<Models.Student>();
+                    var decoratedCsv = csvStudents
+                        .Select(s => new { Student = s, BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0 })
+                        .OrderByDescending(x => x.BildungsgangeCount)
+                        .ThenBy(x => x.Student?.Nachname)
+                        .ThenBy(x => x.Student?.Vorname)
+                        .ToList();
+                    var jsonCsv = System.Text.Json.JsonSerializer.Serialize(decoratedCsv, options);
+                    await JS.InvokeVoidAsync("console.info", $"CsvStudents (from students CSV): {decoratedCsv.Count} entries");
+                    await JS.InvokeVoidAsync("debugLogObject", jsonCsv);
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -679,6 +734,7 @@
         try
         {
             Console.WriteLine($"OnUploadResult invoked: jsonLength={(json?.Length ?? 0)}");
+            if (string.IsNullOrWhiteSpace(json)) return;
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return;
             foreach (var item in doc.RootElement.EnumerateArray())
@@ -955,6 +1011,12 @@
         inputs["onlyChanged"] = _onlyChanged.ToString();
         var allFiles = Config.RequiredFiles.Concat(Config.OptionalFiles).Where(f => f.IsUploaded).ToList();
 
+        Console.WriteLine($"ProcessFiles: Config.Id={Config.Id}, AllFiles.Count={allFiles.Count}");
+        foreach (var f in allFiles)
+        {
+            Console.WriteLine($"ProcessFiles: File - {f.FileKey}: {f.FileName}, Content={f.Content?.Length ?? 0} bytes");
+        }
+
         _progressMessage = "Verarbeitung...";
         _progressPercent = 90;
         StateHasChanged();
@@ -962,22 +1024,54 @@
         // Actual processing (may take time)
         if (Config.Id == "mailadresse-setzen")
         {
+            Console.WriteLine("ProcessFiles: Calling ProcessMailadresseSetzen");
             _result = await ProcessingService.ProcessMailadresseSetzen(allFiles, inputs, Config);
         }
         else if (Config.Id == "webuntis-co" || Config.Id == "webuntis-export")
         {
+            Console.WriteLine("ProcessFiles: Calling ProcessWebuntis");
             _result = await ProcessingService.ProcessWebuntis(allFiles, inputs);
         }
         else
         {
+            Console.WriteLine($"ProcessFiles: Unknown config ID: {Config.Id}");
             _result = new ProcessingResult { Success = false, Message = "Unbekannte Funktion: " + Config.Id };
+        }
+
+        Console.WriteLine($"ProcessFiles: Result - Success={_result?.Success}, Message={_result?.Message}");
+        Console.WriteLine($"ProcessFiles: OutputFiles count={_result?.OutputFiles?.Count ?? 0}");
+        Console.WriteLine($"ProcessFiles: MessageHtml length={_result?.MessageHtml?.Length ?? 0}");
+        if (_result?.MessageHtml != null)
+        {
+            Console.WriteLine($"ProcessFiles: MessageHtml preview={_result.MessageHtml.Substring(0, Math.Min(200, _result.MessageHtml.Length))}");
         }
 
         // Complete progress
         _progressPercent = 100;
         _progressMessage = _result?.Success == true ? "Fertig" : "Fehler bei der Verarbeitung";
         _isProcessing = false;
+        Console.WriteLine($"ProcessFiles: Before StateHasChanged - _isProcessing={_isProcessing}, _result != null={_result != null}");
+        // Nach Verarbeitung: Verhalten je Funktion
+        try
+        {
+            if (_result?.OutputFiles != null && _result.OutputFiles.Any())
+            {
+                if (Config.Id == "webuntis-co")
+                {
+                    // Für Webuntis zur separaten Download-Seite navigieren
+                    try { Nav.NavigateTo($"/downloads/{Config.Id}"); } catch { }
+                }
+                else
+                {
+                    // Für andere Funktionen optional: sofortiger Download
+                    await DownloadAllOutputs();
+                }
+            }
+        }
+        catch { }
+
         StateHasChanged();
+        Console.WriteLine($"ProcessFiles: After StateHasChanged - Component should re-render");
     }
 
     private async Task DownloadFile(OutputFile file)
@@ -997,32 +1091,46 @@
     {
         try
         {
-            var students = ProcessingService.BuildStudentsFromStoredFiles() ?? new List<Models.Student>();
-
-            // Decorate with Bildungsgänge count and sort descending by that count so console shows the most-multi-enrolled first
-            var decorated = students
-                .Select(s => new
-                {
-                    Student = s,
-                    BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0
-                })
-                .OrderByDescending(x => x.BildungsgangeCount)
-                .ThenBy(x => x.Student?.Nachname)
-                .ThenBy(x => x.Student?.Vorname)
-                .ToList();
-
-            var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
-            var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
-
-            // Log a short summary and then the structured object so arrays/lists are expandable in DevTools
-            try { await JS.InvokeVoidAsync("console.info", $"Students (sorted by Bildungsgänge): {decorated.Count} entries"); } catch { }
-            await JS.InvokeVoidAsync("debugLogObject", json);
+            // DatStudents (from .dat files)
+            var datStudents = ProcessingService.BuildStudentsFromStoredFiles() ?? new List<Models.Student>();
+            await LogStudentsToConsole("DatStudents (from .dat files)", datStudents);
+            
+            // CsvStudents (from students CSV)
+            var csvStudents = ProcessingService.GetLastCsvStudents() ?? new List<Models.Student>();
+            if (csvStudents.Any())
+            {
+                await LogStudentsToConsole("CsvStudents (from students CSV)", csvStudents);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("console.info", "No CsvStudents available (students file not uploaded or parsing failed)");
+            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"DumpStudentsToConsole error: {ex}");
             try { await JS.InvokeVoidAsync("console.error", ex.Message); } catch { }
         }
+    }
+
+    private async Task LogStudentsToConsole(string label, List<Models.Student> students)
+    {
+        var decorated = students
+            .Select(s => new
+            {
+                Student = s,
+                BildungsgangeCount = s?.Bildungsgaenge?.Count ?? 0
+            })
+            .OrderByDescending(x => x.BildungsgangeCount)
+            .ThenBy(x => x.Student?.Nachname)
+            .ThenBy(x => x.Student?.Vorname)
+            .ToList();
+            
+        var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
+        var json = System.Text.Json.JsonSerializer.Serialize(decorated, options);
+        
+        await JS.InvokeVoidAsync("console.info", $"{label}: {decorated.Count} entries");
+        await JS.InvokeVoidAsync("debugLogObject", json);
     }
 
     private void Reset()

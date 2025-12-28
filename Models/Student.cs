@@ -39,6 +39,7 @@ namespace BKBToolClient.Models
         public string MailSchulisch { get; set; } = string.Empty;
         public string Telefon { get; set; } = string.Empty;
         public string Mobil { get; set; } = string.Empty;
+        public string Geschlecht { get; set; } = string.Empty;
 
         public List<Adresse> Adresses { get; set; } = new List<Adresse>();
         public List<Erzieher> Erziehers { get; set; } = new List<Erzieher>();
