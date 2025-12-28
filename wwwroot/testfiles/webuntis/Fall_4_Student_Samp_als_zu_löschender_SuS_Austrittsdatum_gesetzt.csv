@@ -1,6 +1,6 @@
 name	longName	foreName	gender	birthDate	klasse.name	entryDate	exitDate	text	id	externKey	medicalReportDuty	schulpflicht	majority	address.email	address.mobile	address.phone	address.city	address.postCode	address.street
-tb000002	Beis	Tri	m	17.10.2011	BD25A		31.07.2026		19850	tb000002	false	false	true	tb000002@students.berufskolleg-borken.de		0175 8304142	OrtB	00001	Beispielweg 2
-XXXXX003	Demo	Leo	m	11.08.2017	MK24A		31.07.2026		19613	XXXXX003	false	false	true	XXXXX003@students.berufskolleg-borken.de		0175 4632536	OrtC	00002	Demoallee 3
-pt000004	Test	Phi	m	09.09.2003	IFK25B		31.07.2026		21549	pt000004	false	false	false	pt000004@students.berufskolleg-borken.de			Borken	OrtD	Testweg 4
-ss000005	Samp	Sin	m	06.04.2007	HBT24A		31.07.2026		19190	ss000005	false	false	true	ss000005@students.berufskolleg-borken.de		0165 690840	OrtE	00004	Musterplatz 5
-oa000006	Böhm	Ole	m	15.03.2007	NBK25A		31.07.2026		22420	oa000006	false	false	true	oa000006@students.berufskolleg-borken.de			OrtF	00005	Anonstr. 6
+tb000002	Beis	Tri	m	17.10.2011	BD25A		31.07.2026		19850	tb000002	false	false	true	tb000002@students.berufskolleg-borken.de		0175 8304142	OrtB	00001	Beweg 2
+XXXXX003	Demo	Leo	m	11.08.2017	MK24A		31.07.2026		19613	XXXXX003	false	false	true	XXXXX003@students.berufskolleg-borken.de		0175 4632536	OrtC	00002	Allee 3
+pt000004	Test	Phi	m	09.09.2003	IF25B		31.07.2026		21549	pt000004	false	false	false	pt000004@students.berufskolleg-borken.de			Borken	OrtD	Teweg 4
+ss000005	Samp	Sin	m	06.04.2007	HT25A		31.07.2026		19190	ss000005	false	false	true	ss000005@students.berufskolleg-borken.de		0165 690840	OrtE	00004	Platz 5
+oa000006	Böhm	Ole	m	15.03.2007	NK25A		31.07.2026		22420	oa000006	false	false	true	oa000006@students.berufskolleg-borken.de			OrtF	00005	Anonstr. 6

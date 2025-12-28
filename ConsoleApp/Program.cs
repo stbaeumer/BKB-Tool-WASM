@@ -174,7 +174,8 @@ internal partial class Program
             // Heuristik zur Zuordnung
             string? key = fileName switch
             {
-                var s when s.StartsWith("Student_", StringComparison.OrdinalIgnoreCase) => "students",
+                // Erlaube auch Präfixe wie "Fall_1_Student_..."
+                var s when s.Contains("Student_", StringComparison.OrdinalIgnoreCase) => "students",
                 var s when s.Contains("SchuelerBasisdaten", StringComparison.OrdinalIgnoreCase) => "basisdaten",
                 var s when s.Contains("SchuelerZusatzdaten", StringComparison.OrdinalIgnoreCase) => "zusatzdaten",
                 var s when s.Contains("SchuelerAdressen", StringComparison.OrdinalIgnoreCase) => "adressen",

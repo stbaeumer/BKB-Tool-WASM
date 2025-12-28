@@ -15,7 +15,7 @@
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "env": {
-        "ASPNETCORE_URLS": "http://127.0.0.1:5000"
+        "ASPNETCORE_URLS": "http://127.0.0.1:5005"
       },
       "serverReadyAction": {
         "pattern": "App url:\\s+http://127\\.0\\.0\\.1:(\\d+)/",
@@ -33,19 +33,24 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-console",
-      "program": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "${workspaceFolder}/ConsoleApp/BKBToolConsole.csproj"
-      ],
+      "program": "${workspaceFolder}/ConsoleApp/bin/Debug/net10.0/BKBToolConsole.dll",
+      "args": [],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
+      "justMyCode": true,
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": false
       }
+    }
+    ,
+    {
+      "name": "Attach: ConsoleApp process",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true
     }
   ],
   "compounds": [

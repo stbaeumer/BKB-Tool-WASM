@@ -73,6 +73,11 @@
         "--configuration",
         "Debug"
       ],
+      "options": {
+        "env": {
+          "ASPNETCORE_URLS": "http://127.0.0.1:5005"
+        }
+      },
       "isBackground": true,
       "runOptions": {
         "instanceLimit": 1

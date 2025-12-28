@@ -87,7 +87,7 @@ public partial class FileProcessingService
                 return new ProcessingResult
                 {
                     Success = false,
-                    Message = "F�r 'Webuntis & Co.' wird mindestens die Datei SchuelerBasisdaten.dat ben�tigt. Bitte laden Sie diese hoch. Optional k�nnen Sie SchuelerZusatzdaten.dat (f�r schulische E?Mails), SchuelerAdressen.dat und SchuelerErzieher.dat bereitstellen."
+                    Message = "Für 'Webuntis & Co.' wird mindestens die Datei SchuelerBasisdaten.dat benötigt. Bitte laden Sie diese hoch. Optional können Sie SchuelerZusatzdaten.dat (für schulische E-Mails), SchuelerAdressen.dat und SchuelerErzieher.dat bereitstellen."
                 };
             }
 
@@ -562,7 +562,7 @@ public partial class FileProcessingService
 
                     var telefon = sz != null && sz.TryGetValue("Telefon-Nr.", out var tel) ? tel : string.Empty;
                     var mobil = string.Empty;
-                    var strasse = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Stra�e", "Strasse")) ? GetDictValue(sb, "Stra�e", "Strasse") : (GetS("Stra�e") ?? GetS("street") ?? string.Empty);
+                    var strasse = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Straße", "Strasse")) ? GetDictValue(sb, "Straße", "Strasse") : (GetS("Straße") ?? GetS("street") ?? string.Empty);
                     var plz = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Postleitzahl", "PLZ")) ? GetDictValue(sb, "Postleitzahl", "PLZ") : (GetS("Postleitzahl") ?? GetS("PLZ") ?? GetS("postCode") ?? string.Empty);
                     var ort = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Ort")) ? GetDictValue(sb, "Ort") : (GetS("Ort") ?? GetS("city") ?? string.Empty);
                     var erzName = string.Empty;
@@ -573,7 +573,7 @@ public partial class FileProcessingService
                         // Use the Erzieher record fields when available (populate ErzName) only for minors
                         var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
                         var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
-                        var streetErz = GetDictValue(erz, "Stra�e", "Strasse", "street");
+                        var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
                         var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                         if (!string.IsNullOrWhiteSpace(combined))
                         {
@@ -584,7 +584,7 @@ public partial class FileProcessingService
                     }
                     var volljaehrig = alter >= 18 ? "1" : "0";
                     var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
-                    var betrStr = ad != null ? GetDictValue(ad, "Stra�e", "Strasse", "street") : string.Empty;
+                    var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
                     var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
                     var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
                     var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
@@ -855,7 +855,7 @@ public partial class FileProcessingService
                             var austrittsdatum = status == "2" || status == "6" ? "31.07." + aktSj1 : (sz != null ? GetDictValue(sz, "Entlassdatum") : string.Empty);
                             var telefon = sz != null ? GetDictValue(sz, "Telefon-Nr.", "Telefon") : string.Empty;
                             var mobil = string.Empty;
-                            var strasse = GetDictValue(b, "Stra�e", "Strasse", "street");
+                            var strasse = GetDictValue(b, "Straße", "Strasse", "street");
                             var plz = GetDictValue(b, "PLZ", "Postleitzahl");
                             var ort = GetDictValue(b, "Ort");
 
@@ -864,7 +864,7 @@ public partial class FileProcessingService
                             {
                                 var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
                                 var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
-                                var streetErz = GetDictValue(erz, "Stra�e", "Strasse", "street");
+                                var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
                                 var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                                 if (!string.IsNullOrWhiteSpace(combined)) erzName = !string.IsNullOrWhiteSpace(streetErz) ? combined + ", " + streetErz : combined;
                                 erzMobil = GetDictValue(erz, "E-Mail 1. Person", "E-Mail", "Email");
@@ -872,7 +872,7 @@ public partial class FileProcessingService
                             }
 
                             var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
-                            var betrStr = ad != null ? GetDictValue(ad, "Stra�e", "Strasse", "street") : string.Empty;
+                            var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
                             var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
                             var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
                             var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
@@ -968,7 +968,7 @@ public partial class FileProcessingService
                             var adMatch = adressenRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                             string telefon = GetDictValue(adMatch, "Telefon-Nr.", "Telefon") ?? GetDictValue(b, "Telefon-Nr.", "Telefon");
                             string mobil = GetDictValue(adMatch, "Mobil", "Fax/Mobilnr") ?? string.Empty;
-                            string strasse = GetDictValue(adMatch, "Stra�e", "Strasse", "street") ?? GetDictValue(b, "Stra�e", "Strasse", "street");
+                            string strasse = GetDictValue(adMatch, "Straße", "Strasse", "street") ?? GetDictValue(b, "Straße", "Strasse", "street");
                             string plz = GetDictValue(adMatch, "PLZ", "Postleitzahl") ?? GetDictValue(b, "PLZ", "Postleitzahl");
                             string ort = GetDictValue(adMatch, "Ort") ?? GetDictValue(b, "Ort");
 
@@ -996,7 +996,7 @@ public partial class FileProcessingService
                                     {
                                         var v1 = GetDictValue(erzMatch, "Vorname 1.Person", "Vorname 1", "Vorname");
                                         var n1 = GetDictValue(erzMatch, "Nachname 1.Person", "Nachname 1", "Nachname");
-                                        var streetErz = GetDictValue(erzMatch, "Stra�e", "Strasse", "street");
+                                        var streetErz = GetDictValue(erzMatch, "Straße", "Strasse", "street");
                                         var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
                                         if (!string.IsNullOrWhiteSpace(combined))
                                         {
@@ -1012,7 +1012,7 @@ public partial class FileProcessingService
 
                             // company fields: prefer SchuelerAdressen (adMatch)
                             string betrName = GetDictValue(adMatch, "Name1", "Name");
-                            string betrStr = GetDictValue(adMatch, "Stra�e", "Strasse", "street");
+                            string betrStr = GetDictValue(adMatch, "Straße", "Strasse", "street");
                             string betrPlz = GetDictValue(adMatch, "PLZ");
                             string betrOrt = GetDictValue(adMatch, "Ort");
                             string betrTel = GetDictValue(adMatch, "1. Tel.-Nr.", "Telefon");
@@ -1203,13 +1203,13 @@ public partial class FileProcessingService
                 }
                 if (admatch != null)
                 {
-                    s.Strasse = GetDictValue(admatch, "Stra�e", "Strasse", "street");
+                    s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
                     s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
                     s.Ort = GetDictValue(admatch, "Ort");
                 }
                 // fallback to primary basis values if still empty
                 if (string.IsNullOrWhiteSpace(s.MailSchulisch)) s.MailSchulisch = GetDictValue(primary, "MailSchulisch", "schulische E-Mail", "E-Mail", "Email");
-                if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Stra�e", "Strasse", "street");
+                if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Straße", "Strasse", "street");
                 if (string.IsNullOrWhiteSpace(s.PLZ)) s.PLZ = GetDictValue(primary, "PLZ", "Postleitzahl");
                 if (string.IsNullOrWhiteSpace(s.Ort)) s.Ort = GetDictValue(primary, "Ort");
             }
@@ -1266,7 +1266,7 @@ public partial class FileProcessingService
                 {
                     var a = new Models.Adresse();
                     a.Name1 = GetDictValue(ad, "Name1", "Name");
-                    a.Strasse = GetDictValue(ad, "Stra�e", "Strasse", "street");
+                    a.Strasse = GetDictValue(ad, "Straße", "Strasse", "street");
                     a.PLZ = GetDictValue(ad, "PLZ", "Postleitzahl");
                     a.Ort = GetDictValue(ad, "Ort");
                     a.Telefon = GetDictValue(ad, "1. Tel.-Nr.", "Telefon");
@@ -1295,7 +1295,7 @@ public partial class FileProcessingService
                     e.Nachname1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
                     e.Telefon = GetDictValue(erz, "Telefon", "Telefon-Nr.");
                     e.Email = GetDictValue(erz, "E-Mail", "Email");
-                    e.Strasse = GetDictValue(erz, "Stra�e", "Strasse", "street");
+                    e.Strasse = GetDictValue(erz, "Straße", "Strasse", "street");
                     foreach (var kv in erz) if (!e.AdditionalFields.ContainsKey(kv.Key)) e.AdditionalFields[kv.Key] = kv.Value;
                     // avoid exact duplicates by email+telefon
                     if (!s.Erziehers.Any(x => !string.IsNullOrWhiteSpace(e.Email) && x.Email == e.Email))
