@@ -44,10 +44,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y lftp
-          lftp -e "
-          set sftp:auto-confirm yes
-          open sftp://${SFTP_USER}:${SFTP_PASSWORD}@${SFTP_HOST}:${SFTP_PORT}
-          cd ${SFTP_REMOTE_PATH}
-          mirror -R --delete dist/wwwroot ./
-          quit
+          lftp -c "
+          set sftp:auto-confirm yes;
+          open sftp://${SFTP_USER}:${SFTP_PASSWORD}@${SFTP_HOST}:${SFTP_PORT};
+          cd ${SFTP_REMOTE_PATH};
+          mirror -R --delete --verbose dist/wwwroot ./;
+          bye
           "
