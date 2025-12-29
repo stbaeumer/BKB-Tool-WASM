@@ -24,9 +24,9 @@ jobs:
 
       - name: Restore Workloads
         run: |
-          dotnet workload restore --skip-manifest-update
+          dotnet workload install wasm-tools --skip-manifest-update
           if [ $? -ne 0 ]; then
-            echo "Workload restore failed"
+            echo "Workload install failed"
             exit 1
           fi
 
