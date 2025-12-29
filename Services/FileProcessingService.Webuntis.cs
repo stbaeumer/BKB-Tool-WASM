@@ -1289,25 +1289,38 @@ public partial class FileProcessingService
                 bg.Klassenart = GetDictValue(b, "Klassenart");
                 bg.Fachklasse = GetDictValue(b, "Fachklasse");
 
-                // Try to find a matching zusatz record for this specific basis record to get BeginnBildungsgang
+                                // Try to find a matching zusatz record for this specific basis record to get BeginnBildungsgang
                 try
                 {
                     Dictionary<string, string>? matchZ = null;
                     if (zusatzRecords != null && zusatzRecords.Any())
                     {
+                        var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
                         var bExtId = GetDictValue(b, "Externe ID-Nr", "Externe ID", "Externe ID Nr", "Externe ID-Nr");
+                        List<Dictionary<string, string>> candidates = new();
+                        
                         if (!string.IsNullOrWhiteSpace(bExtId))
                         {
-                            matchZ = zusatzRecords.LastOrDefault(r => string.Equals(GetDictValue(r, "Externe ID-Nr", "Externe ID", "Externe ID Nr"), bExtId, StringComparison.OrdinalIgnoreCase));
+                            candidates = zusatzRecords.Where(r => string.Equals(GetDictValue(r, "Externe ID-Nr", "Externe ID", "Externe ID Nr"), bExtId, StringComparison.OrdinalIgnoreCase)).ToList();
                         }
-                        if (matchZ == null)
+                        if (candidates.Count == 0)
                         {
-                            matchZ = zusatzRecords.LastOrDefault(r => PersonMatches(r, GetDictValue(b, "Nachname"), GetDictValue(b, "Vorname"), GetDictValue(b, "Geburtsdatum")));
+                            candidates = zusatzRecords.Where(r => PersonMatches(r, GetDictValue(b, "Nachname"), GetDictValue(b, "Vorname"), GetDictValue(b, "Geburtsdatum"))).ToList();
                         }
-                        if (matchZ == null)
+                        if (candidates.Count == 0)
                         {
-                            matchZ = zusatzRecords.LastOrDefault(r => string.Equals(GetDictValue(r, "Nachname").Trim(), GetDictValue(b, "Nachname").Trim(), StringComparison.OrdinalIgnoreCase)
-                                && string.Equals(GetDictValue(r, "Vorname").Trim(), GetDictValue(b, "Vorname").Trim(), StringComparison.OrdinalIgnoreCase));
+                            candidates = zusatzRecords.Where(r => string.Equals(GetDictValue(r, "Nachname").Trim(), GetDictValue(b, "Nachname").Trim(), StringComparison.OrdinalIgnoreCase)
+                                && string.Equals(GetDictValue(r, "Vorname").Trim(), GetDictValue(b, "Vorname").Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+                        }
+                        
+                        // Pick the candidate with the latest BeginnBildungsgang
+                        if (candidates.Count > 0)
+                        {
+                            matchZ = candidates.OrderByDescending(r => {
+                                var bb = GetDictValue(r, "BeginnBildungsgang", "Beginn Bildungsgang");
+                                if (DateTime.TryParseExact(bb, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)) return dt;
+                                return DateTime.MinValue;
+                            }).FirstOrDefault();
                         }
                     }
                     if (matchZ != null)
