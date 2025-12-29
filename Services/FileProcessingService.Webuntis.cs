@@ -216,6 +216,8 @@ public partial class FileProcessingService
                             var fields = SplitRow(line, DetermineDelimiter(zusatzFile.Content, zusatzFile.Delimiter ?? "\t"), string.IsNullOrEmpty(zusatzFile.Quote) ? (char?)null : zusatzFile.Quote[0]);
                             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                             for (int c = 0; c < zhdr.Length; c++) dict[zhdr[c].Trim()] = c < fields.Length ? fields[c] : string.Empty;
+                            // store data row index (first data row = 0)
+                            dict["__rowIndex"] = (i - zhdrIdx - 1).ToString(CultureInfo.InvariantCulture);
                             zusatzRecords.Add(dict);
                         }
                     }
@@ -295,10 +297,6 @@ public partial class FileProcessingService
                     {
                         var detDel = DetermineDelimiter(basisFile.Content, basisFile.Delimiter ?? "\t");
                         var bhdr = SplitRow(blines[bhdrIdx], detDel, string.IsNullOrEmpty(basisFile.Quote) ? (char?)null : basisFile.Quote[0]);
-                        // If header columns match data columns, parse permissively by position.
-                        // Some SchILD exports include header fields with extra spaces or unexpected characters
-                        // which may cause header/data length mismatch. In that case try a permissive parse where
-                        // we map columns by position up to the min(headerLength, dataLength).
                         var headerLen = bhdr.Length;
                         for (int i = bhdrIdx + 1; i < blines.Count; i++)
                         {
@@ -307,11 +305,10 @@ public partial class FileProcessingService
                             var fields = SplitRow(line, detDel, string.IsNullOrEmpty(basisFile.Quote) ? (char?)null : basisFile.Quote[0]);
                             var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                             var mapLen = Math.Min(headerLen, fields.Length);
-                            for (int c = 0; c < mapLen; c++)
-                                dict[bhdr[c].Trim()] = fields[c];
-                            // If there are extra header columns without data, fill with empty string
-                            for (int c = mapLen; c < headerLen; c++)
-                                dict[bhdr[c].Trim()] = string.Empty;
+                            for (int c = 0; c < mapLen; c++) dict[bhdr[c].Trim()] = fields[c];
+                            for (int c = mapLen; c < headerLen; c++) dict[bhdr[c].Trim()] = string.Empty;
+                            // store data row index (first data row = 0)
+                            dict["__rowIndex"] = (i - bhdrIdx - 1).ToString(CultureInfo.InvariantCulture);
                             basisRecords.Add(dict);
                         }
                     }
@@ -813,151 +810,118 @@ public partial class FileProcessingService
                         {
                             // Fallback: use original basis-record based logic if DatStudents is empty
 
-                        var targetBases = new List<Dictionary<string,string>>();
-                        try
-                        {
-                            // Include all basis records, not just those with specific status values
-                            // The filtering will happen at the row level if needed
-                            var basisSelected = basisRecords; // Use ALL records, not just status 2 or 6
-
-                            // group duplicates by Nachname|Vorname|Geburtsdatum
-                            var grouped = basisSelected.GroupBy(b => (GetDictValue(b, "Nachname") + "|" + GetDictValue(b, "Vorname") + "|" + GetDictValue(b, "Geburtsdatum")).ToLowerInvariant());
-                            var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
-                            foreach (var g in grouped)
+                            var targetBases = new List<Dictionary<string,string>>();
+                            try
                             {
-                                if (g.Count() == 1)
-                                {
-                                    targetBases.Add(g.First());
-                                    continue;
-                                }
+                                var basisSelected = basisRecords;
 
-                                // pick the one with later BeginnBildungsgang from zusatzRecords
-                                Dictionary<string,string>? best = null;
-                                DateTime bestDate = DateTime.MinValue;
-                            foreach (var b in g)
-                            {
-                                var nach = GetDictValue(b, "Nachname");
-                                var vor = GetDictValue(b, "Vorname");
-                                var geb = GetDictValue(b, "Geburtsdatum");
-
-                                // Find all matching zusatz records for this person and pick the latest BeginnBildungsgang
-                                DateTime dt = DateTime.MinValue;
-                                try
+                                // group duplicates by Nachname|Vorname|Geburtsdatum
+                                var grouped = basisSelected.GroupBy(b => (GetDictValue(b, "Nachname") + "|" + GetDictValue(b, "Vorname") + "|" + GetDictValue(b, "Geburtsdatum")).ToLowerInvariant());
+                                var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                                foreach (var g in grouped)
                                 {
-                                    // Prefer matching by external ID if the basis record contains one
-                                    var bExtId = GetDictValue(b, "Externe ID-Nr", "Externe ID", "Externe ID Nr", "Externe ID-Nr");
-                                    List<Dictionary<string, string>> matches = new();
-                                    if (!string.IsNullOrWhiteSpace(bExtId))
+                                    if (g.Count() == 1)
                                     {
-                                        matches = zusatzRecords.Where(r => string.Equals(GetDictValue(r, "Externe ID-Nr", "Externe ID", "Externe ID Nr"), bExtId, StringComparison.OrdinalIgnoreCase)).ToList();
+                                        targetBases.Add(g.First());
+                                        continue;
                                     }
-                                    if (matches == null || matches.Count == 0)
+
+                                    // Wähle die Basiszeile mit dem neuesten BeginnBildungsgang aus der Zusatzdaten-Zeile mit gleichem __rowIndex
+                                    Dictionary<string,string>? best = null;
+                                    DateTime bestDate = DateTime.MinValue;
+                                    foreach (var b in g)
                                     {
-                                        // fallback to person/birthdate matching
-                                        matches = zusatzRecords.Where(r => PersonMatches(r, nach, vor, geb)).ToList();
-                                        if (matches == null || matches.Count == 0)
+                                        try
                                         {
-                                            // final fallback: name-only
-                                            matches = zusatzRecords.Where(r =>
-                                                string.Equals(GetDictValue(r, "Nachname").Trim(), nach.Trim(), StringComparison.OrdinalIgnoreCase)
-                                                && string.Equals(GetDictValue(r, "Vorname").Trim(), vor.Trim(), StringComparison.OrdinalIgnoreCase)
-                                            ).ToList();
+                                            var rowIdx = GetDictValue(b, "__rowIndex");
+                                            var zr = zusatzRecords.FirstOrDefault(r => string.Equals(GetDictValue(r, "__rowIndex"), rowIdx, StringComparison.Ordinal));
+                                            var bb = GetDictValue(zr, "BeginnBildungsgang", "Beginn Bildungsgang");
+                                            if (!string.IsNullOrWhiteSpace(bb) && DateTime.TryParseExact(bb, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                                            {
+                                                if (parsed >= bestDate)
+                                                {
+                                                    best = b;
+                                                    bestDate = parsed;
+                                                }
+                                            }
                                         }
+                                        catch { }
                                     }
 
-                                    foreach (var zr in matches)
-                                    {
-                                        var bb = GetDictValue(zr, "BeginnBildungsgang", "Beginn Bildungsgang", "BeginnBildungsgang");
-                                        if (!string.IsNullOrWhiteSpace(bb) && DateTime.TryParseExact(bb, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-                                        {
-                                            if (parsed > dt) dt = parsed;
-                                        }
-                                    }
+                                    targetBases.Add(best ?? g.First());
                                 }
-                                catch { }
+                            }
+                            catch
+                            {
+                                targetBases = basisRecords.Where(b => (GetDictValue(b, "Status") == "2" || GetDictValue(b, "Status") == "6")).ToList();
+                            }
 
-                                // choose basis record: prefer later BeginnBildungsgang; on tie prefer the later basis record in file
-                                if (dt >= bestDate)
+                            foreach (var b in targetBases)
+                            {
+                                var familienname = GetDictValue(b, "Nachname", "Familienname", "name");
+                                var vorname = GetDictValue(b, "Vorname", "givenName", "forename");
+                                var geburtsdatum = GetDictValue(b, "Geburtsdatum", "birthDate");
+                                var status = GetDictValue(b, "Status", "status");
+
+                                // find related zusatz, adressen, erzieher by person
+                                Dictionary<string,string>? sz = null; try { sz = zusatzRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
+                                Dictionary<string,string>? ad = null; try { ad = adressenRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
+                                Dictionary<string,string>? erz = null; try { erz = erzieherRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
+
+                                // compute age
+                                int alter = -1; DateTime dtb; var formats2 = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                                if (DateTime.TryParseExact(geburtsdatum, formats2, CultureInfo.InvariantCulture, DateTimeStyles.None, out dtb)) { alter = DateTime.Now.Year - dtb.Year; if (DateTime.Now < dtb.AddYears(alter)) alter--; }
+
+                                // Export all students regardless of status
+                                var email = sz != null ? GetDictValue(sz, "schulische E-Mail", "MailSchulisch", "E-Mail") : string.Empty;
+                                var klasse = GetDictValue(b, "Klasse", "klasse", "Klasse.name");
+                                var kurzname = !string.IsNullOrWhiteSpace(email) && email.Contains('@') ? email.Split('@')[0] : string.Empty;
+                                var geschlecht = GetDictValue(b, "Geschlecht").ToUpperInvariant();
+                                var eintrittsdatum = string.Empty;
+                                var austrittsdatum = status == "2" || status == "6" ? "31.07." + aktSj1 : (sz != null ? GetDictValue(sz, "Entlassdatum") : string.Empty);
+                                var telefon = sz != null ? GetDictValue(sz, "Telefon-Nr.", "Telefon") : string.Empty;
+                                var mobil = string.Empty;
+                                var strasse = GetDictValue(b, "Straße", "Strasse", "street");
+                                var plz = GetDictValue(b, "PLZ", "Postleitzahl");
+                                var ort = GetDictValue(b, "Ort");
+
+                                var erzName = string.Empty; var erzMobil = string.Empty; var erzTelefon = string.Empty;
+                                if (alter < 18 && erz != null)
                                 {
-                                    best = b;
-                                    bestDate = dt;
+                                    var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
+                                    var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
+                                    var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
+                                    var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
+                                    if (!string.IsNullOrWhiteSpace(combined)) erzName = !string.IsNullOrWhiteSpace(streetErz) ? combined + ", " + streetErz : combined;
+                                    erzMobil = GetDictValue(erz, "E-Mail 1. Person", "E-Mail", "Email");
+                                    erzTelefon = GetDictValue(erz, "Telefon", "Telefon-Nr.");
                                 }
+
+                                var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
+                                var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
+                                var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
+                                var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
+                                var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
+                                var betrTel2 = ad != null ? GetDictValue(ad, "2. Tel.-Nr.") : string.Empty;
+                                var betrMail = ad != null ? GetDictValue(ad, "E-Mail", "Email") : string.Empty;
+                                var betrBetreuer = ad != null ? ((GetDictValue(ad, "Betreuer Anrede") != string.Empty ? GetDictValue(ad, "Betreuer Anrede") + " " : string.Empty) + (GetDictValue(ad, "Betreuer Vorname") != string.Empty ? GetDictValue(ad, "Betreuer Vorname") + " " : string.Empty) + GetDictValue(ad, "Betreuer Nachname")).Trim() : string.Empty;
+                                var schildAddrId = ad != null ? GetDictValue(ad, "SchILD-Adress-ID", "SchILD Adress ID") : string.Empty;
+
+                                var mailSchulisch = !string.IsNullOrWhiteSpace(GetDictValue(b, "MailSchulisch")) ? GetDictValue(b, "MailSchulisch") : (sz != null ? GetDictValue(sz, "schulische E-Mail") : string.Empty);
+                                var o365 = mailSchulisch ?? string.Empty;
+                                var benutzer = string.Empty; if (!string.IsNullOrWhiteSpace(mailSchulisch) && mailSchulisch.Contains('@')) benutzer = mailSchulisch.Split('@')[0];
+
+                                var row = new List<string>
+                                {
+                                    EscapeCsv(email), EscapeCsv(familienname), EscapeCsv(vorname), EscapeCsv(klasse), EscapeCsv(kurzname), EscapeCsv(geschlecht), EscapeCsv(geburtsdatum), EscapeCsv(eintrittsdatum), EscapeCsv(austrittsdatum),
+                                    EscapeCsv(telefon), EscapeCsv(mobil), EscapeCsv(strasse), EscapeCsv(plz), EscapeCsv(ort), EscapeCsv(erzName), EscapeCsv(erzMobil), EscapeCsv(erzTelefon), EscapeCsv(alter >= 18 ? "1" : "0"),
+                                    EscapeCsv(betrName), EscapeCsv(betrStr), EscapeCsv(betrPlz), EscapeCsv(betrOrt), EscapeCsv(betrTel), EscapeCsv(betrTel2), EscapeCsv(betrMail), EscapeCsv(betrBetreuer), EscapeCsv(schildAddrId),
+                                    EscapeCsv(o365), EscapeCsv(benutzer)
+                                };
+
+                                swt.WriteLine(string.Join(',', row));
+                                targetRowsWritten++;
                             }
-
-                                targetBases.Add(best ?? g.First());
-                            }
-                        }
-                        catch
-                        {
-                            targetBases = basisRecords.Where(b => (GetDictValue(b, "Status") == "2" || GetDictValue(b, "Status") == "6")).ToList();
-                        }
-
-                        foreach (var b in targetBases)
-                        {
-                            var familienname = GetDictValue(b, "Nachname", "Familienname", "name");
-                            var vorname = GetDictValue(b, "Vorname", "givenName", "forename");
-                            var geburtsdatum = GetDictValue(b, "Geburtsdatum", "birthDate");
-                            var status = GetDictValue(b, "Status", "status");
-
-                            // find related zusatz, adressen, erzieher by person
-                            Dictionary<string,string>? sz = null; try { sz = zusatzRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
-                            Dictionary<string,string>? ad = null; try { ad = adressenRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
-                            Dictionary<string,string>? erz = null; try { erz = erzieherRecords.LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum)); } catch { }
-
-                            // compute age
-                            int alter = -1; DateTime dtb; var formats2 = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
-                            if (DateTime.TryParseExact(geburtsdatum, formats2, CultureInfo.InvariantCulture, DateTimeStyles.None, out dtb)) { alter = DateTime.Now.Year - dtb.Year; if (DateTime.Now < dtb.AddYears(alter)) alter--; }
-
-                            // Export all students regardless of status
-                            var email = sz != null ? GetDictValue(sz, "schulische E-Mail", "MailSchulisch", "E-Mail") : string.Empty;
-                            var klasse = GetDictValue(b, "Klasse", "klasse", "Klasse.name");
-                            var kurzname = !string.IsNullOrWhiteSpace(email) && email.Contains('@') ? email.Split('@')[0] : string.Empty;
-                            var geschlecht = GetDictValue(b, "Geschlecht").ToUpperInvariant();
-                            var eintrittsdatum = string.Empty;
-                            var austrittsdatum = status == "2" || status == "6" ? "31.07." + aktSj1 : (sz != null ? GetDictValue(sz, "Entlassdatum") : string.Empty);
-                            var telefon = sz != null ? GetDictValue(sz, "Telefon-Nr.", "Telefon") : string.Empty;
-                            var mobil = string.Empty;
-                            var strasse = GetDictValue(b, "Straße", "Strasse", "street");
-                            var plz = GetDictValue(b, "PLZ", "Postleitzahl");
-                            var ort = GetDictValue(b, "Ort");
-
-                            var erzName = string.Empty; var erzMobil = string.Empty; var erzTelefon = string.Empty;
-                            if (alter < 18 && erz != null)
-                            {
-                                var v1 = GetDictValue(erz, "Vorname 1.Person", "Vorname 1", "Vorname");
-                                var n1 = GetDictValue(erz, "Nachname 1.Person", "Nachname 1", "Nachname");
-                                var streetErz = GetDictValue(erz, "Straße", "Strasse", "street");
-                                var combined = (v1 + (string.IsNullOrWhiteSpace(v1) || string.IsNullOrWhiteSpace(n1) ? string.Empty : " ") + n1).Trim();
-                                if (!string.IsNullOrWhiteSpace(combined)) erzName = !string.IsNullOrWhiteSpace(streetErz) ? combined + ", " + streetErz : combined;
-                                erzMobil = GetDictValue(erz, "E-Mail 1. Person", "E-Mail", "Email");
-                                erzTelefon = GetDictValue(erz, "Telefon", "Telefon-Nr.");
-                            }
-
-                            var betrName = ad != null ? GetDictValue(ad, "Name1", "Name") : string.Empty;
-                            var betrStr = ad != null ? GetDictValue(ad, "Straße", "Strasse", "street") : string.Empty;
-                            var betrPlz = ad != null ? GetDictValue(ad, "PLZ") : string.Empty;
-                            var betrOrt = ad != null ? GetDictValue(ad, "Ort") : string.Empty;
-                            var betrTel = ad != null ? GetDictValue(ad, "1. Tel.-Nr.", "Telefon") : string.Empty;
-                            var betrTel2 = ad != null ? GetDictValue(ad, "2. Tel.-Nr.") : string.Empty;
-                            var betrMail = ad != null ? GetDictValue(ad, "E-Mail", "Email") : string.Empty;
-                            var betrBetreuer = ad != null ? ((GetDictValue(ad, "Betreuer Anrede") != string.Empty ? GetDictValue(ad, "Betreuer Anrede") + " " : string.Empty) + (GetDictValue(ad, "Betreuer Vorname") != string.Empty ? GetDictValue(ad, "Betreuer Vorname") + " " : string.Empty) + GetDictValue(ad, "Betreuer Nachname")).Trim() : string.Empty;
-                            var schildAddrId = ad != null ? GetDictValue(ad, "SchILD-Adress-ID", "SchILD Adress ID") : string.Empty;
-
-                            var mailSchulisch = !string.IsNullOrWhiteSpace(GetDictValue(b, "MailSchulisch")) ? GetDictValue(b, "MailSchulisch") : (sz != null ? GetDictValue(sz, "schulische E-Mail") : string.Empty);
-                            var o365 = mailSchulisch ?? string.Empty;
-                            var benutzer = string.Empty; if (!string.IsNullOrWhiteSpace(mailSchulisch) && mailSchulisch.Contains('@')) benutzer = mailSchulisch.Split('@')[0];
-
-                            var row = new List<string>
-                            {
-                                EscapeCsv(email), EscapeCsv(familienname), EscapeCsv(vorname), EscapeCsv(klasse), EscapeCsv(kurzname), EscapeCsv(geschlecht), EscapeCsv(geburtsdatum), EscapeCsv(eintrittsdatum), EscapeCsv(austrittsdatum),
-                                EscapeCsv(telefon), EscapeCsv(mobil), EscapeCsv(strasse), EscapeCsv(plz), EscapeCsv(ort), EscapeCsv(erzName), EscapeCsv(erzMobil), EscapeCsv(erzTelefon), EscapeCsv(alter >= 18 ? "1" : "0"),
-                                EscapeCsv(betrName), EscapeCsv(betrStr), EscapeCsv(betrPlz), EscapeCsv(betrOrt), EscapeCsv(betrTel), EscapeCsv(betrTel2), EscapeCsv(betrMail), EscapeCsv(betrBetreuer), EscapeCsv(schildAddrId),
-                                EscapeCsv(o365), EscapeCsv(benutzer)
-                            };
-
-                            swt.WriteLine(string.Join(',', row));
-                            targetRowsWritten++;
-                        }
                         }  // end else (fallback to basis records)
                     }
 
@@ -1289,39 +1253,14 @@ public partial class FileProcessingService
                 bg.Klassenart = GetDictValue(b, "Klassenart");
                 bg.Fachklasse = GetDictValue(b, "Fachklasse");
 
-                                // Try to find a matching zusatz record for this specific basis record to get BeginnBildungsgang
+                // 1:1 Zuordnung per Zeilenindex zwischen Basis und Zusatzdaten
                 try
                 {
+                    var rowIdx = GetDictValue(b, "__rowIndex");
                     Dictionary<string, string>? matchZ = null;
-                    if (zusatzRecords != null && zusatzRecords.Any())
+                    if (!string.IsNullOrWhiteSpace(rowIdx) && zusatzRecords != null && zusatzRecords.Count > 0)
                     {
-                        var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
-                        var bExtId = GetDictValue(b, "Externe ID-Nr", "Externe ID", "Externe ID Nr", "Externe ID-Nr");
-                        List<Dictionary<string, string>> candidates = new();
-                        
-                        if (!string.IsNullOrWhiteSpace(bExtId))
-                        {
-                            candidates = zusatzRecords.Where(r => string.Equals(GetDictValue(r, "Externe ID-Nr", "Externe ID", "Externe ID Nr"), bExtId, StringComparison.OrdinalIgnoreCase)).ToList();
-                        }
-                        if (candidates.Count == 0)
-                        {
-                            candidates = zusatzRecords.Where(r => PersonMatches(r, GetDictValue(b, "Nachname"), GetDictValue(b, "Vorname"), GetDictValue(b, "Geburtsdatum"))).ToList();
-                        }
-                        if (candidates.Count == 0)
-                        {
-                            candidates = zusatzRecords.Where(r => string.Equals(GetDictValue(r, "Nachname").Trim(), GetDictValue(b, "Nachname").Trim(), StringComparison.OrdinalIgnoreCase)
-                                && string.Equals(GetDictValue(r, "Vorname").Trim(), GetDictValue(b, "Vorname").Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
-                        }
-                        
-                        // Pick the candidate with the latest BeginnBildungsgang
-                        if (candidates.Count > 0)
-                        {
-                            matchZ = candidates.OrderByDescending(r => {
-                                var bb = GetDictValue(r, "BeginnBildungsgang", "Beginn Bildungsgang");
-                                if (DateTime.TryParseExact(bb, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt)) return dt;
-                                return DateTime.MinValue;
-                            }).FirstOrDefault();
-                        }
+                        matchZ = zusatzRecords.FirstOrDefault(r => string.Equals(GetDictValue(r, "__rowIndex"), rowIdx, StringComparison.Ordinal));
                     }
                     if (matchZ != null)
                     {
@@ -1492,6 +1431,8 @@ public partial class FileProcessingService
                         var fields = SplitRow(line, DetermineDelimiter(zusatzBytes, "\t"), null);
                         var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                         for (int c = 0; c < hdr.Length; c++) dict[hdr[c].Trim()] = c < fields.Length ? fields[c] : string.Empty;
+                        // store data row index (first data row = 0)
+                        dict["__rowIndex"] = (i - hdrIdx - 1).ToString(CultureInfo.InvariantCulture);
                         zusatzRecords.Add(dict);
                     }
                 }
@@ -1574,6 +1515,8 @@ public partial class FileProcessingService
                         var mapLen = Math.Min(headerLen, fields.Length);
                         for (int c = 0; c < mapLen; c++) dict[hdr[c].Trim()] = fields[c];
                         for (int c = mapLen; c < headerLen; c++) dict[hdr[c].Trim()] = string.Empty;
+                        // store data row index (first data row = 0)
+                        dict["__rowIndex"] = (i - hdrIdx - 1).ToString(CultureInfo.InvariantCulture);
                         basisRecords.Add(dict);
                     }
                 }
