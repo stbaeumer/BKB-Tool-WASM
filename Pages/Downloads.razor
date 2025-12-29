@@ -38,6 +38,40 @@
                     </div>
                 }
 
+                @if (_newStudents != null && _newStudents.Count > 0)
+                {
+                    <div class="alert alert-info">
+                        <div class="fw-semibold mb-2">Neue Schüler (max. 10 angezeigt)</div>
+                        <div class="table-responsive mb-1">
+                            <table class="table table-sm mb-0 align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Nachname</th>
+                                        <th scope="col">Vorname</th>
+                                        <th scope="col">Klasse</th>
+                                        <th scope="col">Geburtsdatum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in _newStudents)
+                                    {
+                                        <tr>
+                                            <td>@s.Nachname</td>
+                                            <td>@s.Vorname</td>
+                                            <td>@s.Klasse</td>
+                                            <td>@s.Geburtsdatum</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (_newStudentsTotal > _newStudents.Count)
+                        {
+                            <div class="text-muted small">Insgesamt @_newStudentsTotal neue Schüler, es werden die ersten 10 angezeigt.</div>
+                        }
+                    </div>
+                }
+
                 @if (_files.Count == 0)
                 {
                     <div class="alert alert-warning mb-0">Es wurden keine Ausgabedateien gefunden. Bitte führen Sie die Verarbeitung zuerst aus.</div>
@@ -98,11 +132,29 @@
         _config = configs.FirstOrDefault(c => string.Equals(c.Id, Id, StringComparison.OrdinalIgnoreCase));
         _files.Clear();
         _stats = null;
+        _newStudents = new();
+        _newStudentsTotal = 0;
 
         var statsBytes = ProcessingService.GetFile("webuntis_stats");
         if (statsBytes != null && statsBytes.Length > 0)
         {
             try { _stats = JsonSerializer.Deserialize<WebuntisStats>(statsBytes); } catch { _stats = null; }
+        }
+
+        var addedBytes = ProcessingService.GetFile("webuntis_added_students");
+        if (addedBytes != null && addedBytes.Length > 0)
+        {
+            try
+            {
+                var fullList = JsonSerializer.Deserialize<List<WebuntisNewStudent>>(addedBytes) ?? new();
+                _newStudentsTotal = fullList.Count;
+                _newStudents = fullList.Take(10).ToList();
+            }
+            catch
+            {
+                _newStudents = new();
+                _newStudentsTotal = 0;
+            }
         }
 
         if (_config?.OutputFiles != null)
@@ -175,4 +227,14 @@
     }
 
     private record WebuntisStats(int Unchanged, int Added, int Removed, int CsvCount, int NewCount);
+    private class WebuntisNewStudent
+    {
+        public string Nachname { get; set; } = string.Empty;
+        public string Vorname { get; set; } = string.Empty;
+        public string Klasse { get; set; } = string.Empty;
+        public string Geburtsdatum { get; set; } = string.Empty;
+    }
+
+    private List<WebuntisNewStudent> _newStudents = new();
+    private int _newStudentsTotal = 0;
 }

@@ -1,0 +1,4 @@
+-O2
+-v
+-g
+-fwasm-exceptions

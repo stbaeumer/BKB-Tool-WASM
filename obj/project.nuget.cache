@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "i5gSILV8fjU=",
+  "dgSpecHash": "trg8TAUChNI=",
   "success": true,
   "projectFilePath": "/workspaces/BKB-Tool-WASM/BKBToolClient.csproj",
   "expectedPackageFiles": [
@@ -35,9 +35,9 @@
     "/home/codespace/.nuget/packages/microsoft.jsinterop/10.0.0/microsoft.jsinterop.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.jsinterop.webassembly/10.0.0/microsoft.jsinterop.webassembly.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.net.illink.tasks/10.0.0/microsoft.net.illink.tasks.10.0.0.nupkg.sha512",
-    "/home/codespace/.nuget/packages/microsoft.net.sdk.webassembly.pack/10.0.0/microsoft.net.sdk.webassembly.pack.10.0.0.nupkg.sha512",
+    "/home/codespace/.nuget/packages/microsoft.net.sdk.webassembly.pack/10.0.1/microsoft.net.sdk.webassembly.pack.10.0.1.nupkg.sha512",
     "/home/codespace/.nuget/packages/system.text.encoding.codepages/7.0.0/system.text.encoding.codepages.7.0.0.nupkg.sha512",
-    "/home/codespace/.nuget/packages/microsoft.netcore.app.runtime.mono.browser-wasm/10.0.0/microsoft.netcore.app.runtime.mono.browser-wasm.10.0.0.nupkg.sha512"
+    "/home/codespace/.nuget/packages/microsoft.netcore.app.ref/10.0.1/microsoft.netcore.app.ref.10.0.1.nupkg.sha512"
   ],
   "logs": [
     {

@@ -1,0 +1,2 @@
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Text.Encoding.Extensions.dll
+20A46F3C-C591-4E60-9495-3D9358AE9489

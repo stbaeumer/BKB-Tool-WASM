@@ -1,0 +1,2 @@
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Drawing.dll
+413AB56A-5CEF-431D-861C-8B50348FB77C

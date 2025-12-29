@@ -1,0 +1,14 @@
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/Microsoft.Extensions.Configuration.Json.dll
+73744613-ACE6-4C1A-8315-7D21BB81122B
+6000001
+6000002
+6000003
+6000007
+6000008
+6000009
+600000a
+600000b
+600000c
+600000d
+600000e
+600000f

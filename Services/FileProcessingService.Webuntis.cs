@@ -39,6 +39,14 @@ public partial class FileProcessingService
         public int NewCount { get; set; }
     }
 
+    private class WebuntisNewStudent
+    {
+        public string Nachname { get; set; } = string.Empty;
+        public string Vorname { get; set; } = string.Empty;
+        public string Klasse { get; set; } = string.Empty;
+        public string Geburtsdatum { get; set; } = string.Empty;
+    }
+
     // Reusable matcher for other helper methods (matches by Nachname, Vorname, Geburtsdatum)
     private bool PersonMatches(IDictionary<string, string>? r, string lname, string fname, string bdate)
     {
@@ -378,6 +386,61 @@ public partial class FileProcessingService
                     {
                         datKeys.Add(MakeKey(ds.Nachname, ds.Vorname, ds.Geburtsdatum));
                     }
+                }
+
+                // Capture preview of newly added students for UI (limit 10 to keep output small)
+                var addedStudentsPreview = new List<WebuntisNewStudent>();
+                if (DatStudents != null && DatStudents.Count > 0)
+                {
+                    DateTime ParseDateOrMin(string? dt)
+                    {
+                        if (string.IsNullOrWhiteSpace(dt)) return DateTime.MinValue;
+                        var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                        if (DateTime.TryParseExact(dt, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)) return parsed;
+                        if (DateTime.TryParse(dt, new CultureInfo("de-DE"), DateTimeStyles.None, out parsed)) return parsed;
+                        if (DateTime.TryParse(dt, out parsed)) return parsed;
+                        return DateTime.MinValue;
+                    }
+
+                    string GetLatestKlasse(Models.Student ds)
+                    {
+                        if (ds?.Bildungsgaenge != null && ds.Bildungsgaenge.Count > 0)
+                        {
+                            var latestBg = ds.Bildungsgaenge
+                                .OrderByDescending(b => ParseDateOrMin(b.BeginnBildungsgang))
+                                .FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.Klasse));
+                            if (latestBg != null && !string.IsNullOrWhiteSpace(latestBg.Klasse))
+                                return latestBg.Klasse;
+                        }
+                        return ds?.Klasse ?? string.Empty;
+                    }
+
+                    foreach (var ds in DatStudents)
+                    {
+                        var key = MakeKey(ds.Nachname, ds.Vorname, ds.Geburtsdatum);
+                        if (csvKeys.Contains(key)) continue;
+
+                        var preview = new WebuntisNewStudent
+                        {
+                            Nachname = ds.Nachname ?? string.Empty,
+                            Vorname = ds.Vorname ?? string.Empty,
+                            Klasse = GetLatestKlasse(ds),
+                            Geburtsdatum = ds.GeburtsdatumParsed?.ToString("dd.MM.yyyy") ?? (ds.Geburtsdatum ?? string.Empty)
+                        };
+
+                        addedStudentsPreview.Add(preview);
+                        if (addedStudentsPreview.Count >= 10) break;
+                    }
+
+                    try
+                    {
+                        StoreFile("webuntis_added_students", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(addedStudentsPreview)));
+                    }
+                    catch { }
+                }
+                else
+                {
+                    try { StoreFile("webuntis_added_students", Encoding.UTF8.GetBytes("[]")); } catch { }
                 }
 
                 int unchanged = datKeys.Intersect(csvKeys).Count();

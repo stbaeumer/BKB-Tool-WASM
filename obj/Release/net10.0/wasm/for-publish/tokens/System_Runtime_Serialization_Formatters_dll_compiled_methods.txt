@@ -1,0 +1,5 @@
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Runtime.Serialization.Formatters.dll
+45EFC423-DDEC-4014-9A0F-1F3B8E36F3B2
+6000001
+6000002
+6000003

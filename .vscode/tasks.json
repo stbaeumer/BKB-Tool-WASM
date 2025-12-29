@@ -45,6 +45,53 @@
       "problemMatcher": []
     },
     {
+      "label": "publish-release",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "publish",
+        "${workspaceFolder}/BKBToolClient.csproj",
+        "-c",
+        "Release",
+        "-o",
+        "${workspaceFolder}/dist"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "serve-dist",
+      "command": "python3",
+      "type": "shell",
+      "args": [
+        "-m",
+        "http.server",
+        "5000",
+        "--directory",
+        "${workspaceFolder}/dist/wwwroot"
+      ],
+      "isBackground": true,
+      "runOptions": {
+        "instanceLimit": 1
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": ".*"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*Serving HTTP on.*|.*Starting server.*",
+          "endsPattern": ".*"
+        }
+      }
+    },
+    {
       "label": "run-console-app",
       "command": "dotnet",
       "type": "shell",
@@ -71,11 +118,11 @@
         "dotnet",
         "run",
         "--configuration",
-        "Debug"
+        "Release"
       ],
       "options": {
         "env": {
-          "ASPNETCORE_URLS": "http://127.0.0.1:5005"
+          "ASPNETCORE_URLS": "http://127.0.0.1:5000"
         }
       },
       "isBackground": true,

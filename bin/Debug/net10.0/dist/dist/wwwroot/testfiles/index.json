@@ -1,0 +1,9 @@
+{
+  "files": [
+    "/testfiles/mailadresse-setzen/SchuelerBasisdaten.dat",
+    "/testfiles/mailadresse-setzen/SchuelerZusatzdaten.dat",
+    "/testfiles/webuntis/Fall1_SchuelerBasisdaten_.dat",
+    "/testfiles/webuntis/Fall1_SchuelerZusatzdaten.dat",
+    "/testfiles/webuntis/Fall1_Student_nichts_zu_tun.csv"
+  ]
+}

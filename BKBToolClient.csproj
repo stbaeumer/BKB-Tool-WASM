@@ -5,12 +5,28 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>BKBToolClient</RootNamespace>
+    <!-- Globalization bleibt aktiv für DE Formate, kann Größe erhöhen -->
     <InvariantGlobalization>false</InvariantGlobalization>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <!-- Debug: volle Debug-Unterstützung, größere Payload -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <BlazorEnableDebugging>true</BlazorEnableDebugging>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <!-- Release: kompakterer Build für schnelleren Erststart -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <BlazorEnableDebugging>false</BlazorEnableDebugging>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <!-- Assemblies trimmen, reduziert Download-Größe -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- AOT für schnellere Laufzeit (längerer Build) -->
+    <RunAOTCompilation>true</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>

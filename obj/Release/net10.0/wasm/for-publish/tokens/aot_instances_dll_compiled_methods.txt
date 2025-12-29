@@ -1,0 +1,2 @@
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/aot-instances.dll
+55A778A8-6EE7-4930-BC8A-CA33F5963EAB
