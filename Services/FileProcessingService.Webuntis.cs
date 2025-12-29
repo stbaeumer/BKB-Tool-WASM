@@ -195,6 +195,28 @@ public partial class FileProcessingService
                     .ToList();
             }
 
+            // Zentraler Key-Helper für Vergleiche (Student_.csv vs. andere Quellen)
+            string NormalizeDateForKey(string? dt)
+            {
+                var formats = new[] { "dd.MM.yyyy", "d.M.yyyy", "dd.MM.yy", "d.M.yy", "yyyy-MM-dd", "yyyyMMdd" };
+                if (!string.IsNullOrWhiteSpace(dt) && DateTime.TryParseExact(dt.Trim(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                    return parsed.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+                return (dt ?? string.Empty).Trim().ToLowerInvariant();
+            }
+            string MakeKey(string? ln, string? fn, string? bd)
+                => ($"{(ln ?? string.Empty).Trim().ToLowerInvariant()}|{(fn ?? string.Empty).Trim().ToLowerInvariant()}|{NormalizeDateForKey(bd)}");
+            var studentCsvKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (uniqueStudents != null)
+            {
+                foreach (var s in uniqueStudents)
+                {
+                    s.TryGetValue("longName", out var ln);
+                    s.TryGetValue("foreName", out var fn);
+                    s.TryGetValue("birthDate", out var bd);
+                    studentCsvKeys.Add(MakeKey(ln, fn, bd));
+                }
+            }
+
             // Parse Zusatz- and Basisdaten into dictionaries for lookups
             List<Dictionary<string, string>> zusatzRecords = new();
             try
@@ -364,18 +386,7 @@ public partial class FileProcessingService
                 string MakeKey(string? ln, string? fn, string? bd)
                     => ($"{(ln ?? string.Empty).Trim().ToLowerInvariant()}|{(fn ?? string.Empty).Trim().ToLowerInvariant()}|{NormalizeDate(bd)}");
 
-                var csvKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                if (uniqueStudents != null)
-                {
-                    foreach (var s in uniqueStudents)
-                    {
-                        s.TryGetValue("longName", out var ln);
-                        s.TryGetValue("foreName", out var fn);
-                        s.TryGetValue("birthDate", out var bd);
-                        csvKeys.Add(MakeKey(ln, fn, bd));
-                    }
-                }
-
+                var csvKeys = studentCsvKeys;
                 var datKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 if (DatStudents != null)
                 {
@@ -615,7 +626,14 @@ public partial class FileProcessingService
                     var geburtsdatum = !string.IsNullOrWhiteSpace(GetDictValue(sb, "Geburtsdatum")) ? GetDictValue(sb, "Geburtsdatum") : bdate;
                     var eintrittsdatum = string.Empty;
                     string austrittsdatum = string.Empty;
-                    if (status == "2" || status == "6") austrittsdatum = "31.07." + aktSj1;
+                    // Status ermitteln
+                    var statusVal = latestBg?.Status ?? student.Status ?? string.Empty;
+                    // Wenn im Student_.csv vorhanden UND Status nicht 2/6 bzw. kein Basis-Datensatz => heutiges Datum
+                    if (studentCsvKeys.Contains(MakeKey(familienname, vorname, geburtsdatum)) &&
+                        statusVal != "2" && statusVal != "6")
+                    {
+                        austrittsdatum = DateTime.Now.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+                    }
                     else if (s.TryGetValue("ZeugnisdatumLetztesZeugnisInDieserKlasse", out var zd) && !string.IsNullOrWhiteSpace(zd)) austrittsdatum = zd;
                     else if (sz != null && sz.TryGetValue("Entlassdatum", out var ent) && !string.IsNullOrWhiteSpace(ent)) austrittsdatum = ent;
 
@@ -729,17 +747,24 @@ public partial class FileProcessingService
                                         var geburtsdatum = student.Geburtsdatum;
                                         var eintrittsdatum = string.Empty;
                                         var austrittsdatum = string.Empty;
+                                        // Status ermitteln
+                                        var statusVal = latestBg?.Status ?? student.Status ?? string.Empty;
+                                        // Wenn im Student_.csv vorhanden UND Status nicht 2/6 bzw. kein Basis-Datensatz => heutiges Datum
+                                        if (studentCsvKeys.Contains(MakeKey(familienname, vorname, geburtsdatum)) &&
+                                            statusVal != "2" && statusVal != "6")
+                                        {
+                                            austrittsdatum = DateTime.Now.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+                                        }
+
                                         var telefon = student.Telefon;
                                         var mobil = student.Mobil;
                                         var strasse = student.Strasse;
                                         var plz = student.PLZ;
                                         var ort = student.Ort;
-                                        var volljaehrig = student.Volljaehrig ? "1" : "0";
-
                                         var erzName = string.Empty;
                                         var erzMobil = string.Empty;
                                         var erzTelefon = string.Empty;
-                                        if (student.Erziehers != null && student.Erziehers.Any())
+                                        if (student.Erziehers != null && student.Erziehers.Count > 0)
                                         {
                                             var erz = student.Erziehers.FirstOrDefault();
                                             if (erz != null)
@@ -762,7 +787,7 @@ public partial class FileProcessingService
                                         var betrMail = string.Empty;
                                         var betrBetreuer = string.Empty;
                                         var schildAddrId = string.Empty;
-                                        if (student.Adresses != null && student.Adresses.Any())
+                                        if (student.Adresses != null && student.Adresses.Count > 0)
                                         {
                                             var ad = student.Adresses.FirstOrDefault();
                                             if (ad != null)
