@@ -20,9 +20,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          cache: false
 
       - name: Restore Workloads
-        run: dotnet workload restore BKBToolClient.csproj
+        run: |
+          dotnet workload restore --skip-manifest-update
+          if [ $? -ne 0 ]; then
+            echo "Workload restore failed"
+            exit 1
+          fi
 
       - name: Restore
         run: dotnet restore BKBToolClient.csproj
