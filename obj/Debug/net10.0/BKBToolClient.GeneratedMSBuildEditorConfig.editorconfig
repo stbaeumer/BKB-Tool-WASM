@@ -52,6 +52,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvSW5kZXgucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/workspaces/BKB-Tool-WASM/Pages/Webuntis.razor]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV2VidW50aXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [/workspaces/BKB-Tool-WASM/Pages/_Imports.razor]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvX0ltcG9ydHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

@@ -16,19 +16,19 @@
 </Router>
 
 @code {
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
     {
-        if (firstRender)
-        {
-            try
-            {
-                // Nach dem ersten Render Blazor: Startup‑Anzeige ausblenden
-                await JS.InvokeVoidAsync("hideStartupProgress");
-            }
-            catch
-            {
-                // still ignore — kein Blocking
-            }
-        }
+      try
+      {
+        // Nach dem ersten Render Blazor: Startup‑Anzeige ausblenden
+        await JS.InvokeVoidAsync("hideStartupProgress");
+      }
+      catch
+      {
+        // still ignore — kein Blocking
+      }
     }
+  }
 }

@@ -5,10 +5,10 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "BKBToolClient",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-s1VF5JJiUFv8SxB6IVV22wZ2T8nzK5ajG2H8SIeE9Hc=",
+    "hash": "sha256-DyhY9UhFsl63R8Yf5moUTHDtIOu2vqoVnhD/Yccm98c=",
     "jsModuleNative": [
       {
-        "name": "dotnet.native.cs8mcre4gh.js"
+        "name": "dotnet.native.8esb43ulok.js"
       }
     ],
     "jsModuleRuntime": [
@@ -18,8 +18,8 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
     ],
     "wasmNative": [
       {
-        "name": "dotnet.native.muve7a13r4.wasm",
-        "integrity": "sha256-vjddPOzSD1RO9Een4QrlAPnxzBSmD/QchBKKmBMLZwg="
+        "name": "dotnet.native.kzrwmevtga.wasm",
+        "integrity": "sha256-UKzntfvvwLzo4VZsY0YFIs1fES5rXOCzO2xTHyQa0iY="
       }
     ],
     "icu": [
