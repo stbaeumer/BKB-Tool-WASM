@@ -90,7 +90,7 @@ public partial class FileProcessingService
         {
             var s = v ?? string.Empty;
             if (s.Contains('"')) s = s.Replace("\"", "\"\"");
-            if (s.IndexOfAny(new[] { ',', '\n', '\r', '"' }) >= 0) s = $"\"{s}\"";
+            if (s.IndexOfAny(new[] { ';', '\n', '\r', '"' }) >= 0) s = $"\"{s}\"";
             return s;
         }
         DateTime ParseDateOrMin(string? dt)
@@ -628,7 +628,7 @@ public partial class FileProcessingService
                 {
                     using (var swt = new System.IO.StreamWriter(msTarget, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
                     {
-                        swt.WriteLine(string.Join(',', webHeaders));
+                        swt.WriteLine(string.Join(';', webHeaders));
                         Console.WriteLine($"ProcessWebuntis: CSV header written");
 
                         // Generate CSV from DatStudents (with latest Bildungsgang per student)
@@ -742,7 +742,7 @@ public partial class FileProcessingService
                                         CsvSafe(key)
                                     };
 
-                                    swt.WriteLine(string.Join(',', row));
+                                    swt.WriteLine(string.Join(';', row));
                                     targetRowsWritten++;
                                 }
                             }
@@ -823,7 +823,7 @@ public partial class FileProcessingService
                                     CsvSafe(key)
                                 };
 
-                                swt.WriteLine(string.Join(',', row));
+                                swt.WriteLine(string.Join(';', row));
                                 targetRowsWritten++;
                             }
                         }
@@ -862,7 +862,7 @@ public partial class FileProcessingService
                     int fallbackRows = 0;
                     using (var swt2 = new System.IO.StreamWriter(msTarget2, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
                     {
-                        swt2.WriteLine(string.Join(',', webHeaders));
+                        swt2.WriteLine(string.Join(';', webHeaders));
                         Console.WriteLine($"ProcessWebuntis Fallback: CSV header written");
                         
                         foreach (var b in basisRecords)
@@ -921,7 +921,7 @@ public partial class FileProcessingService
                                 CsvSafe(key)
                             };
 
-                            swt2.WriteLine(string.Join(',', row));
+                            swt2.WriteLine(string.Join(';', row));
                             fallbackRows++;
                         }
                         
