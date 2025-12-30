@@ -51,6 +51,37 @@
       "request": "attach",
       "processId": "${command:pickProcess}",
       "justMyCode": true
+    },
+    {
+      "name": "Launch with restart.sh",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "kill-and-clean",
+      "program": "${workspaceFolder}/bin/Debug/net9.0/BKBToolClient.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5000"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/Views"
+      }
+    },
+    {
+      "name": "Run restart.sh",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "${workspaceFolder}/restart.sh"
+      ],
+      "console": "integratedTerminal"
     }
   ],
   "compounds": [

@@ -2,6 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "kill-and-clean",
+      "type": "shell",
+      "command": "pkill -9 dotnet 2>/dev/null || true; if lsof -Pi :5000 -sTCP:LISTEN -t >/dev/null 2>&1; then kill -9 $(lsof -t -i:5000) 2>/dev/null || true; fi; sleep 2",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
       "label": "build-wasm",
       "command": "dotnet",
       "type": "shell",
@@ -13,7 +27,8 @@
       "presentation": {
         "reveal": "silent"
       },
-      "problemMatcher": "$msCompile"
+      "problemMatcher": "$msCompile",
+      "dependsOn": ["kill-and-clean"]
     },
     {
       "label": "build-console",
@@ -27,7 +42,8 @@
       "presentation": {
         "reveal": "silent"
       },
-      "problemMatcher": "$msCompile"
+      "problemMatcher": "$msCompile",
+      "dependsOn": ["kill-and-clean"]
     },
     {
       "label": "build",
@@ -145,6 +161,19 @@
       "presentation": {
         "reveal": "silent"
       }
+    },
+    {
+      "label": "restart-app",
+      "type": "shell",
+      "command": "${workspaceFolder}/restart.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      },
+      "dependsOn": ["kill-and-clean"]
     }
   ]
 }

@@ -102,7 +102,16 @@ public partial class FileProcessingService
             if (DateTime.TryParse(dt, out parsed)) return parsed;
             return DateTime.MinValue;
         }
-        string BoolJN(bool b) => b ? "J" : "N";
+        string BoolJN(bool b) => b ? "1" : "0";
+        string GetKeyFromEmail(string? mail)
+            => string.IsNullOrWhiteSpace(mail) || !mail.Contains('@') ? string.Empty : mail.Split('@')[0];
+        string GetSchoolYearEndDate()
+        {
+            var now = DateTime.Today;
+            var startYear = now.Month >= 8 ? now.Year : now.Year - 1;
+            var endDate = new DateTime(startYear + 1, 7, 31);
+            return endDate.ToString("dd.MM.yyyy");
+        }
 
         try
         {
@@ -580,7 +589,7 @@ public partial class FileProcessingService
 
             // Build Webuntis students CSV (Zielformat per Vorgabe)
             var webHeaders = new[] {
-                "E-Mail","Familienname","Vorname","Klasse","Kurzname","Geschlecht","Geburtsdatum","Eintrittsdatum","Austrittsdatum",
+                "Schlüssel","E-Mail","Familienname","Vorname","Klasse","Kurzname","Geschlecht","Geburtsdatum","Eintrittsdatum","Austrittsdatum",
                 "Telefon","Mobil","Strasse","PLZ","Ort","ErzName","ErzMobil","ErzTelefon","Volljaehrig",
                 "BetriebName","BetriebStrasse","BetriebPlz","BetriebOrt","BetriebTelefon","BetriebTelefon2","BetriebMail","BetriebBetreuer","SchildAdressId",
                 "O365Identitaet","Benutzername"
@@ -635,8 +644,10 @@ public partial class FileProcessingService
                                         .OrderByDescending(b => ParseDateOrMin(b.BeginnBildungsgang))
                                         .FirstOrDefault();
                                     var klasse = latestBg?.Klasse ?? student.Klasse ?? string.Empty;
-                                    var kurzname = student.AdditionalFields.TryGetValue("Kurzname", out var kn) ? kn : string.Empty;
+                                    var key = GetKeyFromEmail(student.MailSchulisch);
+                                    var kurzname = key;
                                     var geschlecht = student.AdditionalFields.TryGetValue("Geschlecht", out var gsch) ? gsch : string.Empty;
+                                    var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
                                     var eintritt = latestBg?.BeginnBildungsgang ?? string.Empty;
                                     var austritt = student.AdditionalFields.TryGetValue("Abmeldedatum", out var abm) ? abm : string.Empty;
 
@@ -684,6 +695,10 @@ public partial class FileProcessingService
                                         }
                                     }
 
+                                    // Austrittsdatum muss immer gesetzt sein
+                                    if (string.IsNullOrWhiteSpace(austritt))
+                                        austritt = GetSchoolYearEndDate();
+
                                     var studentAddresses = student?.Adresses ?? new List<Models.Adresse>();
                                     var home = studentAddresses.FirstOrDefault(a =>
                                         a.AdditionalFields.TryGetValue("Adressart", out var art) && art.Equals("Privat", StringComparison.OrdinalIgnoreCase))
@@ -695,12 +710,13 @@ public partial class FileProcessingService
 
                                     var row = new List<string>
                                     {
+                                        CsvSafe(key),
                                         CsvSafe(student.MailSchulisch),
                                         CsvSafe(student.Nachname),
                                         CsvSafe(student.Vorname),
                                         CsvSafe(klasse),
                                         CsvSafe(kurzname),
-                                        CsvSafe(geschlecht),
+                                        CsvSafe(geschlechtFormatted),
                                         CsvSafe(student.GeburtsdatumParsed?.ToString("dd.MM.yyyy") ?? student.Geburtsdatum),
                                         CsvSafe(eintritt),
                                         CsvSafe(austritt),
@@ -723,7 +739,7 @@ public partial class FileProcessingService
                                         CsvSafe(string.Join(" ", new[]{betrieb?.BetreuerAnrede, betrieb?.BetreuerVorname, betrieb?.BetreuerNachname}.Where(x=>!string.IsNullOrWhiteSpace(x)))),
                                         CsvSafe(betrieb?.SchildAdressId),
                                         CsvSafe(student.MailSchulisch),
-                                        CsvSafe(student.MailSchulisch)
+                                        CsvSafe(key)
                                     };
 
                                     swt.WriteLine(string.Join(',', row));
@@ -757,10 +773,15 @@ public partial class FileProcessingService
                                 var geburtsdatum = GetDictValue(b, "Geburtsdatum", "birthDate");
                                 var status = GetDictValue(b, "Status", "status");
                                 var klasse = GetDictValue(b, "Klasse", "klasse", "Klasse.name");
-                                var kurzname = GetDictValue(b, "Kurzname");
+                                var mail = GetDictValue(b, "schulische E-Mail", "E-Mail", "Email");
+                                var key = GetKeyFromEmail(mail);
+                                var kurzname = key;
                                 var geschlecht = GetDictValue(b, "Geschlecht");
+                                var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
                                 var eintritt = GetDictValue(b, "BeginnBildungsgang", "Beginn Bildungsgang", "Aufnahmedatum");
                                 var austritt = GetDictValue(b, "Abmeldedatum");
+                                // Austrittsdatum muss immer gesetzt sein
+                                if (string.IsNullOrWhiteSpace(austritt)) austritt = GetSchoolYearEndDate();
 
                                 var admatch = (adressenRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                                 var erzmatch = (erzieherRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
@@ -770,12 +791,13 @@ public partial class FileProcessingService
 
                                 var row = new List<string>
                                 {
-                                    CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email")),
+                                    CsvSafe(key),
+                                    CsvSafe(mail),
                                     CsvSafe(familienname),
                                     CsvSafe(vorname),
                                     CsvSafe(klasse),
                                     CsvSafe(kurzname),
-                                    CsvSafe(geschlecht),
+                                    CsvSafe(geschlechtFormatted),
                                     CsvSafe(geburtsdatum),
                                     CsvSafe(eintritt),
                                     CsvSafe(austritt),
@@ -798,7 +820,7 @@ public partial class FileProcessingService
                                     CsvSafe(string.Join(" ", new[]{GetDictValue(betrieb, "Betreuer Anrede"), GetDictValue(betrieb, "Betreuer Vorname"), GetDictValue(betrieb, "Betreuer Nachname")}.Where(x=>!string.IsNullOrWhiteSpace(x)))),
                                     CsvSafe(GetDictValue(betrieb, "SchILD-Adress-ID")),
                                     CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email")),
-                                    CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email"))
+                                    CsvSafe(key)
                                 };
 
                                 swt.WriteLine(string.Join(',', row));
@@ -848,11 +870,16 @@ public partial class FileProcessingService
                             var familienname = GetDictValue(b, "Nachname", "Familienname", "name");
                             var vorname = GetDictValue(b, "Vorname", "givenName", "forename");
                             var geburtsdatum = GetDictValue(b, "Geburtsdatum", "birthDate");
+                            var mail = GetDictValue(b, "schulische E-Mail", "E-Mail", "Email");
+                            var key = GetKeyFromEmail(mail);
                             var klasse = GetDictValue(b, "Klasse", "klasse", "Klasse.name");
-                            var kurzname = GetDictValue(b, "Kurzname");
+                            var kurzname = key;
                             var geschlecht = GetDictValue(b, "Geschlecht");
+                            var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
                             var eintritt = GetDictValue(b, "BeginnBildungsgang", "Beginn Bildungsgang", "Aufnahmedatum");
                             var austritt = GetDictValue(b, "Abmeldedatum");
+                            // Austrittsdatum muss immer gesetzt sein
+                            if (string.IsNullOrWhiteSpace(austritt)) austritt = GetSchoolYearEndDate();
 
                             var admatch = (adressenRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                             var erzmatch = (erzieherRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
@@ -862,12 +889,13 @@ public partial class FileProcessingService
 
                             var row = new List<string>
                             {
-                                CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email")),
+                                CsvSafe(key),
+                                CsvSafe(mail),
                                 CsvSafe(familienname),
                                 CsvSafe(vorname),
                                 CsvSafe(klasse),
                                 CsvSafe(kurzname),
-                                CsvSafe(geschlecht),
+                                CsvSafe(geschlechtFormatted),
                                 CsvSafe(geburtsdatum),
                                 CsvSafe(eintritt),
                                 CsvSafe(austritt),
@@ -890,7 +918,7 @@ public partial class FileProcessingService
                                 CsvSafe(string.Join(" ", new[]{GetDictValue(betrieb, "Betreuer Anrede"), GetDictValue(betrieb, "Betreuer Vorname"), GetDictValue(betrieb, "Betreuer Nachname")}.Where(x=>!string.IsNullOrWhiteSpace(x)))),
                                 CsvSafe(GetDictValue(betrieb, "SchILD-Adress-ID")),
                                 CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email")),
-                                CsvSafe(GetDictValue(b, "schulische E-Mail", "E-Mail", "Email"))
+                                CsvSafe(key)
                             };
 
                             swt2.WriteLine(string.Join(',', row));

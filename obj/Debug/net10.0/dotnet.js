@@ -5,7 +5,7 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "BKBToolClient",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-gRov+RpxEzMIchZ2RxCg92bd9MvM82rY/fVP/QQ9AZg=",
+    "hash": "sha256-r7kNrEllATgeX2bAjpcwz4Ay4QdzN30j3ATax+sN7I0=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.cs8mcre4gh.js"
@@ -1044,15 +1044,15 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
       },
       {
         "virtualPath": "BKBToolClient.wasm",
-        "name": "BKBToolClient.dgnhw26et1.wasm",
-        "integrity": "sha256-/dhIN76GcjpnJhu1ChlfMC9g+8IvrAPRfF2SVTa0czM="
+        "name": "BKBToolClient.ct95f7a9sv.wasm",
+        "integrity": "sha256-EHSSOarf08X+sL9ZYRlohiwm/f7dWW6UigM6hTx4q7g="
       }
     ],
     "pdb": [
       {
         "virtualPath": "BKBToolClient.pdb",
-        "name": "BKBToolClient.ltjdm2duxm.pdb",
-        "integrity": "sha256-mRP7WKovqf973vRP3LCTjU+nBzGTxPMPtGeTrBKSkOo="
+        "name": "BKBToolClient.w6nggmi0ok.pdb",
+        "integrity": "sha256-mN5YN+U15QvuDUgakW2BI/R8SRsdz0ysMrHC608Y88I="
       }
     ],
     "libraryInitializers": [
