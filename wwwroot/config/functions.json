@@ -146,12 +146,15 @@
         "/testfiles/webuntis/Fall_2_Student_Samp_als_neuer_Schueler_erkannt.csv",
         "/testfiles/webuntis/Fall_2_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_2_SchuelerZusatzdaten.dat",
-        "/testfiles/webuntis/Fall_3_Student_Böhm_2_Bildungsgaenge_späterer_Bildungsgangbeginn_gewinnt.csv",
+        "/testfiles/webuntis/Fall_3_Student_Böhm_hat_2_Zeilen_es_gewinnt_MM25A_mit_spätestem_Bildungsgangbeginn.csv",
         "/testfiles/webuntis/Fall_3_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_3_SchuelerZusatzdaten.dat",
         "/testfiles/webuntis/Fall_4_Student_Samp_als_zu_löschender_SuS_Austrittsdatum_gesetzt.csv",
         "/testfiles/webuntis/Fall_4_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_4_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_5_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_5_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_5_Student_Böhm_Neue_Klasse_HT25A.csv",
         "/testfiles/webuntis/SchuelerErzieher.dat",
         "/testfiles/webuntis/SchuelerAdressen.dat"
       ]
