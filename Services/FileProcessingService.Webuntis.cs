@@ -1124,43 +1124,37 @@ public partial class FileProcessingService
                     if (!string.IsNullOrWhiteSpace(mail)) s.MailSchulisch = mail;
                     s.Telefon = GetDictValue(zmatch, "Telefon-Nr.", "Telefon");
                 }
-                
-                // Address logic based on age:
-                // - Minor (minderjährig): use address from SchuelerErzieher
-                // - Adult (volljährig): use address from SchuelerBasisdaten
+
+                // Start with the address from SchuelerBasisdaten
+                s.Strasse = GetDictValue(primary, "Straße", "Strasse", "street");
+                s.PLZ = GetDictValue(primary, "PLZ", "Postleitzahl");
+                s.Ort = GetDictValue(primary, "Ort");
+
+                // Supplement with SchuelerAdressen, but only when basis is empty
+                if (admatch != null)
+                {
+                    if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
+                    if (string.IsNullOrWhiteSpace(s.PLZ)) s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
+                    if (string.IsNullOrWhiteSpace(s.Ort)) s.Ort = GetDictValue(admatch, "Ort");
+                }
+
+                // For minors, fall back to SchuelerErzieher only if address still missing
                 if (!s.Volljaehrig)
                 {
-                    // Minderjähriger: Adresse aus SchuelerErzieher
-                    // Find matching Erzieher record by Vorname, Nachname
                     var erzieherMatch = erzieherRecords?.FirstOrDefault(r => 
                         string.Equals(GetDictValue(r, "Vorname", "Vorname 1.Person", "Vorname 1").Trim(), s.Vorname.Trim(), StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(GetDictValue(r, "Nachname", "Nachname 1.Person", "Nachname 1").Trim(), s.Nachname.Trim(), StringComparison.OrdinalIgnoreCase));
                     
                     if (erzieherMatch != null)
                     {
-                        s.Strasse = GetDictValue(erzieherMatch, "Straße", "Strasse", "street");
-                        s.PLZ = GetDictValue(erzieherMatch, "PLZ", "Postleitzahl");
-                        s.Ort = GetDictValue(erzieherMatch, "Ort");
-                        s.Telefon = GetDictValue(erzieherMatch, "Telefon", "Telefon-Nr.");
+                        if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(erzieherMatch, "Straße", "Strasse", "street");
+                        if (string.IsNullOrWhiteSpace(s.PLZ)) s.PLZ = GetDictValue(erzieherMatch, "PLZ", "Postleitzahl");
+                        if (string.IsNullOrWhiteSpace(s.Ort)) s.Ort = GetDictValue(erzieherMatch, "Ort");
+                        if (string.IsNullOrWhiteSpace(s.Telefon)) s.Telefon = GetDictValue(erzieherMatch, "Telefon", "Telefon-Nr.");
                     }
                 }
-                else
-                {
-                    // Volljähriger: Adresse aus SchuelerBasisdaten (bereits in primary enthalten)
-                    // or from adressen file as fallback
-                    if (admatch != null)
-                    {
-                        s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
-                        s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
-                        s.Ort = GetDictValue(admatch, "Ort");
-                    }
-                }
-                
-                // fallback to primary basis values if still empty
+
                 if (string.IsNullOrWhiteSpace(s.MailSchulisch)) s.MailSchulisch = GetDictValue(primary, "MailSchulisch", "schulische E-Mail", "E-Mail", "Email");
-                if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Straße", "Strasse", "street");
-                if (string.IsNullOrWhiteSpace(s.PLZ)) s.PLZ = GetDictValue(primary, "PLZ", "Postleitzahl");
-                if (string.IsNullOrWhiteSpace(s.Ort)) s.Ort = GetDictValue(primary, "Ort");
             }
             catch { }
 
