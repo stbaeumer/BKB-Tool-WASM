@@ -470,9 +470,11 @@ public partial class FileProcessingService
                     try { StoreFile("webuntis_added_students", Encoding.UTF8.GetBytes("[]")); } catch { }
                 }
 
-                // Collect deleted students (in CSV, but not active in basis data OR completely missing)
-                if (uniqueStudents != null && uniqueStudents.Count > 0)
+                // Collect deleted students (in CSV, aber nicht aktiv in Basisdaten)
+                void CollectDeletedStudentsFromCsv()
                 {
+                    if (uniqueStudents == null || uniqueStudents.Count == 0) return;
+
                     foreach (var s in uniqueStudents)
                     {
                         string GetS(string k) => s.TryGetValue(k, out var v) ? v : string.Empty;
@@ -481,13 +483,9 @@ public partial class FileProcessingService
                         var bdate = GetS("birthDate");
                         var key = MakeKey(lname, fname, bdate);
 
-                        // Student ist "gelöscht" wenn:
-                        // 1. Er ist in CSV, aber nicht in activeStudentKeys (entweder gar nicht in Basis oder nur mit inaktivem Status)
-                        bool shouldBeMarkedAsDeleted = !activeStudentKeys.Contains(key);
-                        
-                        if (shouldBeMarkedAsDeleted)
+                        // Student ist gelöscht, wenn er nicht unter den aktiven Basisdaten-Keys ist
+                        if (!activeStudentKeys.Contains(key))
                         {
-                            // Finde Klasse aus Basisdaten falls vorhanden, sonst aus CSV
                             Dictionary<string, string>? sb = null;
                             try { sb = basisRecords?.LastOrDefault(r => PersonMatches(r, lname, fname, bdate)); } catch { }
 
@@ -505,21 +503,24 @@ public partial class FileProcessingService
                             if (deletedStudentsPreview.Count >= 10) break;
                         }
                     }
-
-                    try
-                    {
-                        StoreFile("webuntis_deleted_students", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(deletedStudentsPreview)));
-                        
-                        // Zeige gelöschte Studenten in der Ausgabe an (ENTFERNT - wird jetzt nach Statistik angezeigt)
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error storing deleted students: {ex}");
-                    }
                 }
-                else
+
+                CollectDeletedStudentsFromCsv();
+
+                // Fallback: falls keine Vorschau gebaut wurde, aber removed > 0, erneut versuchen
+                if (deletedStudentsPreview.Count == 0 && csvKeys.Except(activeStudentKeys).Any())
                 {
-                    try { StoreFile("webuntis_deleted_students", Encoding.UTF8.GetBytes("[]")); } catch { }
+                    deletedStudentsPreview.Clear();
+                    CollectDeletedStudentsFromCsv();
+                }
+
+                try
+                {
+                    StoreFile("webuntis_deleted_students", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(deletedStudentsPreview)));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error storing deleted students: {ex}");
                 }
 
                 // Berechne Statistiken basierend auf activeStudentKeys statt datKeys
@@ -539,10 +540,10 @@ public partial class FileProcessingService
                 try { StoreFile("webuntis_stats", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(statsObj))); } catch { }
                 result.MessageHtml += $"<pre>Vergleich: unverändert={unchanged}, neu={added}, gelöscht={removed} (CSV={csvKeys.Count}, Neu aktiv={activeStudentKeys.Count})</pre>";
                 
-                // Zeige gelöschte Studenten nach der Statistik an
+                // Zeige gelöschte Studenten nach der Statistik an (Liste auf 10 begrenzt)
                 if (deletedStudentsPreview.Count > 0)
                 {
-                    result.MessageHtml += $"<pre>❌ {deletedStudentsPreview.Count} Student(en) werden als gelöscht markiert:</pre>";
+                    result.MessageHtml += $"<pre>❌ {removed} Student(en) werden als gelöscht markiert (zeige bis zu 10):</pre>";
                     foreach (var ds in deletedStudentsPreview)
                     {
                         try
@@ -1053,12 +1054,38 @@ public partial class FileProcessingService
                     if (!string.IsNullOrWhiteSpace(mail)) s.MailSchulisch = mail;
                     s.Telefon = GetDictValue(zmatch, "Telefon-Nr.", "Telefon");
                 }
-                if (admatch != null)
+                
+                // Address logic based on age:
+                // - Minor (minderjährig): use address from SchuelerErzieher
+                // - Adult (volljährig): use address from SchuelerBasisdaten
+                if (!s.Volljaehrig)
                 {
-                    s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
-                    s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
-                    s.Ort = GetDictValue(admatch, "Ort");
+                    // Minderjähriger: Adresse aus SchuelerErzieher
+                    // Find matching Erzieher record by Vorname, Nachname
+                    var erzieherMatch = erzieherRecords?.FirstOrDefault(r => 
+                        string.Equals(GetDictValue(r, "Vorname", "Vorname 1.Person", "Vorname 1").Trim(), s.Vorname.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(GetDictValue(r, "Nachname", "Nachname 1.Person", "Nachname 1").Trim(), s.Nachname.Trim(), StringComparison.OrdinalIgnoreCase));
+                    
+                    if (erzieherMatch != null)
+                    {
+                        s.Strasse = GetDictValue(erzieherMatch, "Straße", "Strasse", "street");
+                        s.PLZ = GetDictValue(erzieherMatch, "PLZ", "Postleitzahl");
+                        s.Ort = GetDictValue(erzieherMatch, "Ort");
+                        s.Telefon = GetDictValue(erzieherMatch, "Telefon", "Telefon-Nr.");
+                    }
                 }
+                else
+                {
+                    // Volljähriger: Adresse aus SchuelerBasisdaten (bereits in primary enthalten)
+                    // or from adressen file as fallback
+                    if (admatch != null)
+                    {
+                        s.Strasse = GetDictValue(admatch, "Straße", "Strasse", "street");
+                        s.PLZ = GetDictValue(admatch, "PLZ", "Postleitzahl");
+                        s.Ort = GetDictValue(admatch, "Ort");
+                    }
+                }
+                
                 // fallback to primary basis values if still empty
                 if (string.IsNullOrWhiteSpace(s.MailSchulisch)) s.MailSchulisch = GetDictValue(primary, "MailSchulisch", "schulische E-Mail", "E-Mail", "Email");
                 if (string.IsNullOrWhiteSpace(s.Strasse)) s.Strasse = GetDictValue(primary, "Straße", "Strasse", "street");

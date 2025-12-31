@@ -909,7 +909,6 @@
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/6aztr6drkn-{0}-hh1ubtj7ud-hh1ubtj7ud.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/ml7qjwo7t4-{0}-15ao47s414-15ao47s414.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/y7a2rx3c89-{0}-ewnj6wv2ht-ewnj6wv2ht.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/fbfj7zye8r-{0}-dktkks350s-dktkks350s.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/2gmxkoq0wa-{0}-66stpp682q-66stpp682q.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/5odisg7g1e-{0}-4zhysgmj1f-4zhysgmj1f.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/sp190sffkh-{0}-f7yamg8acn-f7yamg8acn.gz
@@ -1138,10 +1137,11 @@
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/5bfr0di2hv-{0}-f8wlk3zb1n-f8wlk3zb1n.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/qa7v3jjtkq-{0}-zo30d3bsu7-zo30d3bsu7.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/tc0ojhpa2f-{0}-f8wlk3zb1n-f8wlk3zb1n.gz
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.ct95f7a9sv.wasm
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.w6nggmi0ok.pdb
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.ct95f7a9sv.wasm.gz
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.w6nggmi0ok.pdb.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/j00ti7kaa9-{0}-ct95f7a9sv-ct95f7a9sv.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/02z5jieppv-{0}-w6nggmi0ok-w6nggmi0ok.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/kyvmjz7s0i-{0}-y1yae1vihz-y1yae1vihz.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/fbfj7zye8r-{0}-7av64znboe-7av64znboe.gz
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.3h7eqafv2w.wasm
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.fhaqdobqvz.pdb
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.3h7eqafv2w.wasm.gz
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.fhaqdobqvz.pdb.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/j00ti7kaa9-{0}-3h7eqafv2w-3h7eqafv2w.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/02z5jieppv-{0}-fhaqdobqvz-fhaqdobqvz.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/kyvmjz7s0i-{0}-0syuyxo3ep-0syuyxo3ep.gz
