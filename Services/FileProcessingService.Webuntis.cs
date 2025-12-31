@@ -698,7 +698,7 @@ public partial class FileProcessingService
                                     var kurzname = key;
                                     var geschlecht = student.AdditionalFields.TryGetValue("Geschlecht", out var gsch) ? gsch : string.Empty;
                                     var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
-                                    var eintritt = latestBg?.BeginnBildungsgang ?? string.Empty;
+                                    var eintritt = string.Empty; // Eintrittsdatum kann leer bleiben
                                     var austritt = student.AdditionalFields.TryGetValue("Abmeldedatum", out var abm) ? abm : string.Empty;
 
                                     // Prüfe ob Student in CSV existiert und dort kein/zukünftiges Austrittsdatum hat
@@ -755,6 +755,13 @@ public partial class FileProcessingService
                                                ?? studentAddresses.FirstOrDefault();
                                     var betrieb = studentAddresses.FirstOrDefault(a =>
                                         a.AdditionalFields.TryGetValue("Adressart", out var art) && art.Equals("Betrieb", StringComparison.OrdinalIgnoreCase));
+                                    
+                                    // Adresse aus schuelerBasisdaten, Telefon/Mobil aus schuelerZusatzdaten
+                                    var strasse = student.Strasse ?? string.Empty;
+                                    var plz = student.PLZ ?? string.Empty;
+                                    var ort = student.Ort ?? string.Empty;
+                                    var telefon = student.Telefon ?? string.Empty;
+                                    var mobil = student.Mobil ?? string.Empty;
 
                                     var erz = student.Erziehers.FirstOrDefault();
 
@@ -770,11 +777,11 @@ public partial class FileProcessingService
                                         CsvSafe(student.GeburtsdatumParsed?.ToString("dd.MM.yyyy") ?? student.Geburtsdatum),
                                         CsvSafe(eintritt),
                                         CsvSafe(austritt),
-                                        CsvSafe(home?.Telefon),
-                                        CsvSafe(home?.Telefon2),
-                                        CsvSafe(home?.Strasse ?? student.Strasse),
-                                        CsvSafe(home?.PLZ ?? student.PLZ),
-                                        CsvSafe(home?.Ort ?? student.Ort),
+                                        CsvSafe(telefon),
+                                        CsvSafe(mobil),
+                                        CsvSafe(strasse),
+                                        CsvSafe(plz),
+                                        CsvSafe(ort),
                                         CsvSafe($"{erz?.Nachname1} {erz?.Vorname1}".Trim()),
                                         CsvSafe(erz?.Telefon),
                                         CsvSafe(erz?.Telefon),
@@ -828,10 +835,17 @@ public partial class FileProcessingService
                                 var kurzname = key;
                                 var geschlecht = GetDictValue(b, "Geschlecht");
                                 var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
-                                var eintritt = GetDictValue(b, "BeginnBildungsgang", "Beginn Bildungsgang", "Aufnahmedatum");
+                                var eintritt = string.Empty; // Eintrittsdatum kann leer bleiben
                                 var austritt = GetDictValue(b, "Abmeldedatum");
                                 // Austrittsdatum muss immer gesetzt sein
                                 if (string.IsNullOrWhiteSpace(austritt)) austritt = GetSchoolYearEndDate();
+
+                                // Adresse aus schuelerBasisdaten, Telefon/Mobil aus schuelerZusatzdaten
+                                var strasse = GetDictValue(b, "Strasse", "Straße");
+                                var plz = GetDictValue(b, "PLZ");
+                                var ort = GetDictValue(b, "Ort");
+                                var telefon = GetDictValue(b, "Telefon");
+                                var mobil = GetDictValue(b, "Mobiltelefon", "Mobil", "Mobile", "Fax");
 
                                 var admatch = (adressenRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                                 var erzmatch = (erzieherRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
@@ -851,11 +865,11 @@ public partial class FileProcessingService
                                     CsvSafe(geburtsdatum),
                                     CsvSafe(eintritt),
                                     CsvSafe(austritt),
-                                    CsvSafe(GetDictValue(admatch, "1. Tel.-Nr.", "Telefon")),
-                                    CsvSafe(GetDictValue(admatch, "2. Tel.-Nr.")),
-                                    CsvSafe(GetDictValue(admatch, "Straße", "Strasse")),
-                                    CsvSafe(GetDictValue(admatch, "PLZ")),
-                                    CsvSafe(GetDictValue(admatch, "Ort")),
+                                    CsvSafe(telefon),
+                                    CsvSafe(mobil),
+                                    CsvSafe(strasse),
+                                    CsvSafe(plz),
+                                    CsvSafe(ort),
                                     CsvSafe($"{GetDictValue(erzmatch, "Nachname 1.Person")} {GetDictValue(erzmatch, "Vorname 1.Person")}".Trim()),
                                     CsvSafe(GetDictValue(erzmatch, "Telefon")),
                                     CsvSafe(GetDictValue(erzmatch, "Telefon")),
@@ -926,10 +940,17 @@ public partial class FileProcessingService
                             var kurzname = key;
                             var geschlecht = GetDictValue(b, "Geschlecht");
                             var geschlechtFormatted = (geschlecht ?? string.Empty).ToUpperInvariant();
-                            var eintritt = GetDictValue(b, "BeginnBildungsgang", "Beginn Bildungsgang", "Aufnahmedatum");
+                            var eintritt = string.Empty; // Eintrittsdatum kann leer bleiben
                             var austritt = GetDictValue(b, "Abmeldedatum");
                             // Austrittsdatum muss immer gesetzt sein
                             if (string.IsNullOrWhiteSpace(austritt)) austritt = GetSchoolYearEndDate();
+
+                            // Adresse aus schuelerBasisdaten, Telefon/Mobil aus schuelerZusatzdaten
+                            var strasse = GetDictValue(b, "Strasse", "Straße");
+                            var plz = GetDictValue(b, "PLZ");
+                            var ort = GetDictValue(b, "Ort");
+                            var telefon = GetDictValue(b, "Telefon");
+                            var mobil = GetDictValue(b, "Mobiltelefon", "Mobil", "Mobile", "Fax");
 
                             var admatch = (adressenRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
                             var erzmatch = (erzieherRecords ?? new()).LastOrDefault(r => PersonMatches(r, familienname, vorname, geburtsdatum));
@@ -949,11 +970,11 @@ public partial class FileProcessingService
                                 CsvSafe(geburtsdatum),
                                 CsvSafe(eintritt),
                                 CsvSafe(austritt),
-                                CsvSafe(GetDictValue(admatch, "1. Tel.-Nr.", "Telefon")),
-                                CsvSafe(GetDictValue(admatch, "2. Tel.-Nr.")),
-                                CsvSafe(GetDictValue(admatch, "Straße", "Strasse")),
-                                CsvSafe(GetDictValue(admatch, "PLZ")),
-                                CsvSafe(GetDictValue(admatch, "Ort")),
+                                CsvSafe(telefon),
+                                CsvSafe(mobil),
+                                CsvSafe(strasse),
+                                CsvSafe(plz),
+                                CsvSafe(ort),
                                 CsvSafe($"{GetDictValue(erzmatch, "Nachname 1.Person")} {GetDictValue(erzmatch, "Vorname 1.Person")}".Trim()),
                                 CsvSafe(GetDictValue(erzmatch, "Telefon")),
                                 CsvSafe(GetDictValue(erzmatch, "Telefon")),
