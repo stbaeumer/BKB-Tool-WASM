@@ -55,6 +55,15 @@ public partial class FileProcessingService
         public string Geburtsdatum { get; set; } = string.Empty;
     }
 
+    private class WebuntisChangedStudent
+    {
+        public string Nachname { get; set; } = string.Empty;
+        public string Vorname { get; set; } = string.Empty;
+        public string KlasseAlt { get; set; } = string.Empty;
+        public string KlasseNeu { get; set; } = string.Empty;
+        public string Geburtsdatum { get; set; } = string.Empty;
+    }
+
     // Reusable matcher for other helper methods (matches by Nachname, Vorname, Geburtsdatum)
     private bool PersonMatches(IDictionary<string, string>? r, string lname, string fname, string bdate)
     {
@@ -424,6 +433,7 @@ public partial class FileProcessingService
                 // Capture preview of newly added students for UI (limit 10 to keep output small)
                 var addedStudentsPreview = new List<WebuntisNewStudent>();
                 var deletedStudentsPreview = new List<WebuntisDeletedStudent>();
+                var changedStudentsPreview = new List<WebuntisChangedStudent>();
                 
                 if (DatStudents != null && DatStudents.Count > 0)
                 {
@@ -457,6 +467,38 @@ public partial class FileProcessingService
                             addedStudentsPreview.Add(preview);
                             if (addedStudentsPreview.Count >= 10) break;
                         }
+                        else if (csvKeys.Contains(key) && changedStudentsPreview.Count < 10)
+                        {
+                            // Student existiert bereits - prüfe ob sich die Klasse geändert hat
+                            var csvStudent = uniqueStudents?.FirstOrDefault(s =>
+                            {
+                                string GetS(string k) => s.TryGetValue(k, out var v) ? v : string.Empty;
+                                var csvKey = MakeKey(GetS("longName"), GetS("foreName"), GetS("birthDate"));
+                                return string.Equals(csvKey, key, StringComparison.OrdinalIgnoreCase);
+                            });
+
+                            if (csvStudent != null)
+                            {
+                                string GetS(string k) => csvStudent.TryGetValue(k, out var v) ? v : string.Empty;
+                                var csvKlasse = GetS("klasse");
+                                if (string.IsNullOrWhiteSpace(csvKlasse)) csvKlasse = GetS("klasse.name");
+                                var newKlasse = GetLatestKlasse(ds);
+
+                                // Nur hinzufügen, wenn sich die Klasse tatsächlich geändert hat
+                                if (!string.Equals(csvKlasse?.Trim(), newKlasse?.Trim(), StringComparison.OrdinalIgnoreCase))
+                                {
+                                    var changed = new WebuntisChangedStudent
+                                    {
+                                        Nachname = ds.Nachname ?? string.Empty,
+                                        Vorname = ds.Vorname ?? string.Empty,
+                                        KlasseAlt = csvKlasse ?? string.Empty,
+                                        KlasseNeu = newKlasse ?? string.Empty,
+                                        Geburtsdatum = ds.GeburtsdatumParsed?.ToString("dd.MM.yyyy") ?? (ds.Geburtsdatum ?? string.Empty)
+                                    };
+                                    changedStudentsPreview.Add(changed);
+                                }
+                            }
+                        }
                     }
 
                     try
@@ -464,10 +506,17 @@ public partial class FileProcessingService
                         StoreFile("webuntis_added_students", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(addedStudentsPreview)));
                     }
                     catch { }
+                    
+                    try
+                    {
+                        StoreFile("webuntis_changed_students", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(changedStudentsPreview)));
+                    }
+                    catch { }
                 }
                 else
                 {
                     try { StoreFile("webuntis_added_students", Encoding.UTF8.GetBytes("[]")); } catch { }
+                    try { StoreFile("webuntis_changed_students", Encoding.UTF8.GetBytes("[]")); } catch { }
                 }
 
                 // Collect deleted students (in CSV, aber nicht aktiv in Basisdaten)
