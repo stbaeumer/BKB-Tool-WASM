@@ -192,8 +192,11 @@
                 </div>
 
                 <div class="mt-4 d-flex gap-2 align-items-center">
-                    <button class="btn btn-primary btn-lg" @onclick="ProcessFiles" disabled="@_isProcessing">Dateien erstellen</button>
-                    @if (_isProcessing)
+                    @if (!_isProcessing)
+                    {
+                        <button class="btn btn-primary btn-lg" @onclick="ProcessFiles">Dateien erstellen</button>
+                    }
+                    else
                     {
                         <div class="text-muted small mt-2">Verarbeitung läuft…</div>
                     }
