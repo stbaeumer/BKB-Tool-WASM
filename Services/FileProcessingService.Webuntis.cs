@@ -647,6 +647,8 @@ public partial class FileProcessingService
 
             byte[] targetBytes = Array.Empty<byte>();
             int targetRowsWritten = 0;
+            byte[] netmanBytes = Array.Empty<byte>();
+            int netmanRowsWritten = 0;
             try
             {
                 var aktSj0 = (DateTime.Now.Month > 7 ? DateTime.Now.Year : DateTime.Now.Year - 1).ToString();
@@ -914,6 +916,95 @@ public partial class FileProcessingService
                 Console.WriteLine($"ProcessWebuntis CSV generation error: {ex}");
             }
 
+            // Generate ImportNachNetman.csv (comma-separated)
+            try
+            {
+                string CsvSafeComma(string? v)
+                {
+                    var s = v ?? string.Empty;
+                    if (s.Contains('"')) s = s.Replace("\"", "\"\"");
+                    if (s.IndexOfAny(new[] { ',', '\n', '\r', '"' }) >= 0) s = $"\"{s}\"";
+                    return s;
+                }
+
+                string GetLatestKlasse(Models.Student ds)
+                {
+                    if (ds?.Bildungsgaenge != null && ds.Bildungsgaenge.Count > 0)
+                    {
+                        var latestBg = ds.Bildungsgaenge
+                            .OrderByDescending(b => ParseDateOrMin(b.BeginnBildungsgang))
+                            .FirstOrDefault(b => !string.IsNullOrWhiteSpace(b.Klasse))
+                            ?? ds.Bildungsgaenge.OrderByDescending(b => ParseDateOrMin(b.BeginnBildungsgang)).FirstOrDefault();
+
+                        if (!string.IsNullOrWhiteSpace(latestBg?.Klasse)) return latestBg.Klasse;
+                    }
+                    return ds?.Klasse ?? string.Empty;
+                }
+
+                bool IsActive(Models.Student ds)
+                    => ds?.Bildungsgaenge?.Any(bg => bg.Status == "2" || bg.Status == "6") ?? false;
+
+                var netHeaders = new[]
+                {
+                    "Schlüssel","Kurzname","Vorname","Nachname","Mail","Passwort","Klasse","Klassenleitung","BetriebName","BetriebStrasse","BetriebPlz","BetriebOrt","BetriebTelefon"
+                };
+
+                using var msNet = new System.IO.MemoryStream();
+                using (var swNet = new System.IO.StreamWriter(msNet, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), leaveOpen: true))
+                {
+                    swNet.WriteLine(string.Join(',', netHeaders));
+
+                    var sourceStudents = DatStudents ?? new List<Models.Student>();
+                    foreach (var student in sourceStudents)
+                    {
+                        if (!IsActive(student)) continue;
+
+                        student.AdditionalFields.TryGetValue("Externe ID-Nr", out var externeId);
+                        var email = student.MailSchulisch;
+                        var keyPart = !string.IsNullOrWhiteSpace(externeId) ? externeId : GetKeyFromEmail(email);
+                        var kurzname = GetKeyFromEmail(email);
+
+                        DateTime? dob = student.GeburtsdatumParsed;
+                        if (!dob.HasValue && DateTime.TryParse(student.Geburtsdatum, out var gdParsed)) dob = gdParsed;
+                        var pwdDate = dob.HasValue ? dob.Value.ToString("dd.MM.yyyy") : (student.Geburtsdatum ?? string.Empty);
+                        var pwdPrefix = string.IsNullOrWhiteSpace(student.Nachname) ? string.Empty : student.Nachname.Trim()[0].ToString();
+                        var password = string.IsNullOrWhiteSpace(pwdPrefix) || string.IsNullOrWhiteSpace(pwdDate) ? string.Empty : pwdPrefix + pwdDate;
+
+                        var betrieb = student.Adresses.FirstOrDefault(a =>
+                            a.AdditionalFields.TryGetValue("Adressart", out var art) &&
+                            art.Equals("Betrieb", StringComparison.OrdinalIgnoreCase));
+
+                        var row = new List<string>
+                        {
+                            CsvSafeComma(keyPart),
+                            CsvSafeComma(kurzname),
+                            CsvSafeComma(student.Vorname),
+                            CsvSafeComma(student.Nachname),
+                            CsvSafeComma(email),
+                            CsvSafeComma(password),
+                            CsvSafeComma(GetLatestKlasse(student)),
+                            string.Empty, // Klassenleitung (nicht befüllt)
+                            CsvSafeComma(betrieb?.Name1),
+                            CsvSafeComma(betrieb?.Strasse),
+                            CsvSafeComma(betrieb?.PLZ),
+                            CsvSafeComma(betrieb?.Ort),
+                            CsvSafeComma(betrieb?.Telefon)
+                        };
+
+                        swNet.WriteLine(string.Join(',', row));
+                        netmanRowsWritten++;
+                    }
+                }
+
+                msNet.Position = 0;
+                netmanBytes = msNet.ToArray();
+                Console.WriteLine($"ProcessWebuntis: Generated Netman CSV with {netmanRowsWritten} rows, {netmanBytes.Length} bytes");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ProcessWebuntis: Netman export error: {ex}");
+            }
+
             // If the generation produced no rows (e.g. students present but filtered out),
             // fall back to using basisRecords as source so an import file is produced.
             if (targetRowsWritten == 0 && (basisRecords != null && basisRecords.Any()))
@@ -1008,6 +1099,21 @@ public partial class FileProcessingService
                 {
                     Console.WriteLine($"ProcessWebuntis Fallback error: {ex}");
                 }
+            }
+
+            // Add Netman export when available (regardless of the Webuntis CSV status)
+            if (netmanRowsWritten > 0 && netmanBytes != null && netmanBytes.Length > 0)
+            {
+                result.OutputFiles.Add(new OutputFile
+                {
+                    FileName = "ImportNachNetman.csv",
+                    Content = netmanBytes,
+                    Hint = "Netman Import (CSV)",
+                    LineCount = netmanRowsWritten + 1,
+                    FileSize = netmanBytes.Length
+                });
+                try { StoreFile("netman_import", netmanBytes); } catch { }
+                result.MessageHtml += $"<pre>✓ ImportNachNetman.csv erstellt mit {netmanRowsWritten} Zeilen ({netmanBytes.Length} Bytes)</pre>";
             }
 
             // Only add the output file if it has actual data rows (not just the header)
@@ -1123,6 +1229,13 @@ public partial class FileProcessingService
                     var mail = GetDictValue(zmatch, "schulische E-Mail", "MailSchulisch", "E-Mail", "Email");
                     if (!string.IsNullOrWhiteSpace(mail)) s.MailSchulisch = mail;
                     s.Telefon = GetDictValue(zmatch, "Telefon-Nr.", "Telefon");
+
+                    // capture external id for downstream exports
+                    var externeId = GetDictValue(zmatch, "Externe ID-Nr", "ExterneID", "ExterneId");
+                    if (!string.IsNullOrWhiteSpace(externeId))
+                    {
+                        s.AdditionalFields["Externe ID-Nr"] = externeId;
+                    }
                 }
 
                 // Start with the address from SchuelerBasisdaten
