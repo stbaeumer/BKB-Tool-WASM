@@ -101,8 +101,7 @@
           "delimiter": "\t",
           "encoding": "utf-8",
           "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
-        }
-        ,
+        },
         {
           "name": "SchuelerAdressen",
           "allowedExtensions": [".dat"],
@@ -157,6 +156,95 @@
         "/testfiles/webuntis/Fall_5_Student_Böhm_Neue_Klasse_HT25A.csv",
         "/testfiles/webuntis/SchuelerErzieher.dat",
         "/testfiles/webuntis/SchuelerAdressen.dat"
+      ]
+    },
+    {
+      "id": "lernabschnittsdaten",
+      "name": "Lernabschnittsdaten",
+      "description": "Ergänzt Fehlstundendaten in den Lernabschnittsdaten basierend auf der Absence-Liste von Webuntis.",
+      "functionHint": "Die Fehlstunden werden aus der AbsencePerStudent_*.csv extrahiert und in die SchuelerLernabschnittsdaten.dat eingetragen. Die Felder 'SummeFehlstd' und 'SummeFehlstd_unentschuldigt' werden zunächst auf 0 gesetzt.",
+      "requiredFiles": [
+        {
+          "name": "SchuelerLernabschnittsdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "lernabschnittsdaten",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerLernabschnittsdaten.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Lernabschnittsdaten aus SchILD-NRW Export"
+        },
+        {
+          "name": "AbsencePerStudent",
+          "allowedExtensions": [".csv"],
+          "fileKey": "absence",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?AbsencePerStudent_.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Webuntis -> Administration -> Export Absenzen als AbsencePerStudent_*.csv"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [
+        {
+          "key": "abschnitt",
+          "label": "Abschnitt",
+          "placeholder": "1",
+          "defaultValue": "1",
+          "validationRegex": "^[1-4]$",
+          "validationErrorMessage": "Bitte einen Wert zwischen 1 und 4 angeben",
+          "isRequired": true
+        },
+        {
+          "key": "konferenzdatum",
+          "label": "Konferenzdatum",
+          "placeholder": "dd.mm.yyyy",
+          "defaultValue": "",
+          "validationRegex": "^\\d{2}\\.\\d{2}\\.\\d{4}$",
+          "validationErrorMessage": "Bitte das Datum im Format dd.mm.yyyy angeben",
+          "isRequired": true
+        },
+        {
+          "key": "zeugnisdatum",
+          "label": "Zeugnisdatum",
+          "placeholder": "dd.mm.yyyy",
+          "defaultValue": "",
+          "validationRegex": "^\\d{2}\\.\\d{2}\\.\\d{4}$",
+          "validationErrorMessage": "Bitte das Datum im Format dd.mm.yyyy angeben",
+          "isRequired": true
+        },
+        {
+          "key": "maximaleFehlstundenProTag",
+          "label": "Maximale Fehlstunden pro Tag",
+          "placeholder": "6",
+          "defaultValue": "6",
+          "validationRegex": "^[0-9]+$",
+          "validationErrorMessage": "Bitte eine positive Ganzzahl angeben",
+          "isRequired": true
+        },
+        {
+          "key": "fehlzeitenWaehrendDerLetztenTagBleibenUnberuecksichtigt",
+          "label": "Fehlzeiten während der letzten x Tage bleiben unberücksichtigt",
+          "placeholder": "0",
+          "defaultValue": "0",
+          "validationRegex": "^[0-9]+$",
+          "validationErrorMessage": "Bitte eine positive Ganzzahl angeben",
+          "isRequired": true
+        }
+      ],
+      "processingSteps": [
+        { "functionName": "ProcessLernabschnittsdaten", "description": "Fehlstundendaten verarbeiten und eintragen" },
+        { "functionName": "WriteOutput", "description": "Ausgabedateien erzeugen" }
+      ],
+      "submitButtonLabel": "Lernabschnittsdaten verarbeiten",
+      "successMessage": "Lernabschnittsdaten wurden verarbeitet und ergänzt.",
+      "outputFiles": [
+        { "fileKey": "lernabschnittsdaten_modified", "fileName": "SchuelerLernabschnittssdaten.dat", "hint": "Ergänzte Lernabschnittsdaten mit Fehlstunden" }
+      ],
+      "testFiles": [
+        "testfiles/lernabschnittsdaten/Fall_1_AbsencePerStudent_Fehlstunden_neu_erkannt.csv",
+        "testfiles/lernabschnittsdaten/Fall_1_SchuelerLernabschnittsdaten.dat"
       ]
     }
   ]

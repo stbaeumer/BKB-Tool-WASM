@@ -1,0 +1,7 @@
+Schüler*innen	Externe Id	Text	Klasse	Datum	Wochentag	Fehlstd.	Fehlmin.	Abwesenheitsgrund	Text	ENr	Erledigt	Abwesenheit zählt	Entschuldigungstext	Status	Fehltage
+Meyer Hans	15660		WA23A	03.09.25	Mi.	4	180	Fehlt	AU liegt der KH vor	252644	15.12.25	true		entsch.	1
+Meyer Hans	15660		WA23A	10.09.25	Mi.	3	135	Fehlt	AU liegt der KH vor	252644	15.12.25	true		entsch.	1
+Meyer Hans	15660		WA23A	11.09.25	Mi.	6	270	Fehlt	AU liegt der KH vor	252644	15.12.25	true		nicht entsch.	1
+Müller Tristan	15705		AGG23A	29.09.25	Mo.	7	315	Fehlt		247161	30.09.25	true		entsch.	1
+Müller Tristan	15705		AGG23A	30.09.25	Di.	6	270	Fehlt		247162	30.09.25	true		entsch.	1
+Müller Tristan	15705		AGG23A	19.12.25	Fr.	6	270	Fehlt		253513	19.12.25	true		entsch.	1
