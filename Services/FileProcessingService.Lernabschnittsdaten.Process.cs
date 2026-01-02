@@ -66,6 +66,9 @@ public partial class FileProcessingService
         }
 
         var changes = new List<(string Name, string Klasse, string AltSum, string NeuSum, string AltUnent, string NeuUnent)>();
+        var totalRows = Math.Max(lernLines.Count - 1, 0);
+        var changedRows = 0;
+        var newFehlzeitRows = 0;
         var outputLines = new List<string> { lernLines[0] };
         var absDyn = absRecords.Cast<dynamic>().ToList();
 
@@ -99,9 +102,25 @@ public partial class FileProcessingService
             bool changed = !string.Equals(altSum?.Trim() ?? string.Empty, neuSum, StringComparison.Ordinal) ||
                            !string.Equals(altUnent?.Trim() ?? string.Empty, neuUnent, StringComparison.Ordinal);
 
+            var hadSumBefore = !string.IsNullOrWhiteSpace(altSum?.Trim()) && altSum.Trim() != "0";
+            var hasSumNow = !string.IsNullOrWhiteSpace(neuSum) && neuSum != "0";
+            var hadUnentBefore = !string.IsNullOrWhiteSpace(altUnent?.Trim()) && altUnent.Trim() != "0";
+            var hasUnentNow = !string.IsNullOrWhiteSpace(neuUnent) && neuUnent != "0";
+            var isNewFehlzeit = (!hadSumBefore && hasSumNow) || (!hadUnentBefore && hasUnentNow);
+
             fields[idxSum] = neuSum;
             fields[idxSumUnent] = neuUnent;
             fields[idxNach] = $"{origNach}#{klasse}";
+
+            if (changed)
+            {
+                changedRows++;
+            }
+
+            if (isNewFehlzeit)
+            {
+                newFehlzeitRows++;
+            }
 
             if (changed && changes.Count < 10)
             {
@@ -130,18 +149,25 @@ public partial class FileProcessingService
             }
         };
 
+        var summary = new StringBuilder();
+        summary.Append("<div class=\"mb-2\"><strong>Statistik:</strong>")
+               .Append($"<div>Zeilen gesamt: {totalRows}</div>")
+               .Append($"<div>Zeilen mit neuen Fehlzeiten: {newFehlzeitRows}</div>")
+               .Append($"<div>Zeilen mit geänderten Fehlzeiten: {changedRows}</div>")
+               .Append("</div>");
+
         if (changes.Count == 0)
         {
+            summary.Append("<div><strong>Änderungen:</strong> Keine Änderungen erforderlich.</div>");
             result.Message = "Keine Änderungen erforderlich.";
-            result.MessageHtml = "<div>Keine Änderungen erforderlich.</div>";
+            result.MessageHtml = summary.ToString();
         }
         else
         {
-            var sb = new StringBuilder();
-            sb.Append("<div><strong>Änderungen (max. 10):</strong><ul>");
+            summary.Append("<div><strong>Änderungen (max. 10):</strong><ul>");
             foreach (var c in changes)
             {
-                sb.Append("<li>")
+                summary.Append("<li>")
                   .Append(System.Net.WebUtility.HtmlEncode(c.Name))
                   .Append(": Fehlstd ")
                   .Append(System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(c.AltSum) ? "(leer)" : c.AltSum))
@@ -155,11 +181,11 @@ public partial class FileProcessingService
             }
             if (lernLines.Count - 1 > changes.Count)
             {
-                sb.Append("<li class=\"text-muted\">Weitere Änderungen wurden übernommen.</li>");
+                summary.Append("<li class=\"text-muted\">Weitere Änderungen wurden übernommen.</li>");
             }
-            sb.Append("</ul></div>");
+            summary.Append("</ul></div>");
             result.Message = "Fehlzeiten eingetragen.";
-            result.MessageHtml = sb.ToString();
+            result.MessageHtml = summary.ToString();
         }
 
         return result;

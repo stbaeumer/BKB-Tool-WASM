@@ -1140,10 +1140,10 @@
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/cbtu82xng7-{0}-gfy3hmaust-gfy3hmaust.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/wqer8ziggh-{0}-93pe1mipxm-93pe1mipxm.gz
 /workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/qa7v3jjtkq-{0}-wteeoksgq7-wteeoksgq7.gz
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.jyvvrdesru.wasm
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.r0teghcxhk.pdb
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.jyvvrdesru.wasm.gz
-/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.r0teghcxhk.pdb.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/j00ti7kaa9-{0}-jyvvrdesru-jyvvrdesru.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/02z5jieppv-{0}-r0teghcxhk-r0teghcxhk.gz
-/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/kyvmjz7s0i-{0}-9zwdv2ivv5-9zwdv2ivv5.gz
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.7fg9cck0l1.wasm
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.3jl7n6rorc.pdb
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.7fg9cck0l1.wasm.gz
+/workspaces/BKB-Tool-WASM/bin/Debug/net10.0/wwwroot/_framework/BKBToolClient.3jl7n6rorc.pdb.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/j00ti7kaa9-{0}-7fg9cck0l1-7fg9cck0l1.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/02z5jieppv-{0}-3jl7n6rorc-3jl7n6rorc.gz
+/workspaces/BKB-Tool-WASM/obj/Debug/net10.0/compressed/kyvmjz7s0i-{0}-do0t9wsq98-do0t9wsq98.gz

@@ -34,38 +34,12 @@
         <button class="btn btn-sm btn-secondary" @onclick="HandleBackClicked">← Zurück</button>
     </div>
 
-@code {
-    [Parameter] public FunctionConfig Config { get; set; } = null!;
-    [Parameter] public EventCallback OnBack { get; set; }
-
-    protected override void OnParametersSet()
-    {
-        if (Config == null)
-        {
-            Console.WriteLine("Error: FunctionProcessor Config is null!");
-            return;
-        }
-        Reset();
-        base.OnParametersSet();
-    }
-
-    private async Task DownloadAllOutputs()
-    {
-        try
-        {
-            if (_result == null || _result.OutputFiles == null || !_result.OutputFiles.Any()) return;
-            foreach (var of in _result.OutputFiles)
-            {
-                if (of?.Content == null) continue;
-                var base64 = Convert.ToBase64String(of.Content);
-                await JS.InvokeVoidAsync("downloadFile", of.FileName, base64);
-            }
-        }
-        catch { }
-    }
-}
     <div class="card-body">
-        @if (Config != null)
+        @if (Config == null)
+        {
+            <div class="alert alert-danger">Fehler: Komponente nicht initialisiert.</div>
+        }
+        else
         {
             @if (!string.IsNullOrWhiteSpace(Config.FunctionHint))
             {
@@ -73,7 +47,152 @@
                     <div class="alert alert-primary text-white" style="white-space: pre-line;">@Config.FunctionHint</div>
                 </div>
             }
-            @if (!_isProcessing && _result == null && string.IsNullOrWhiteSpace(_previewHtml))
+
+            @if (_isProcessing)
+            {
+                Console.WriteLine($"Progress bar block: _isProcessing={_isProcessing}, _result={_result != null}");
+                <div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
+                    <div class="mb-4 text-center">
+                        <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                            <span class="visually-hidden">Verarbeitung läuft...</span>
+                        </div>
+                    </div>
+                    <h5 class="text-center">Dateien werden verarbeitet...</h5>
+                    
+                    @if (Config.ProcessingSteps.Any())
+                    {
+                        <div class="mt-4 text-start" style="max-width: 500px; margin: 0 auto;">
+                            @for (int i = 0; i < Config.ProcessingSteps.Count; i++)
+                            {
+                                var step = Config.ProcessingSteps[i];
+                                var isCurrentStep = i == _currentProcessingStep;
+                                var isCompletedStep = i < _currentProcessingStep;
+                                
+
+                                <div class="d-flex align-items-center mb-2 @(isCurrentStep ? "text-primary fw-bold" : isCompletedStep ? "text-success" : "text-muted")">
+                                    @if (isCompletedStep)
+                                    {
+                                        <span class="me-2">✓</span>
+                                    }
+                                    else if (isCurrentStep)
+                                    {
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    }
+                                    else
+                                    {
+                                        <span class="me-2">○</span>
+                                    }
+                                    <span>@step.Description</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    
+                    <div class="progress mt-4" style="height: 30px; width: 60%; max-width: 500px; margin: 0 auto;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: @(_progressPercent)%"
+                             aria-valuenow="@_progressPercent" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            @_progressPercent%
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">@_progressMessage</small>
+                </div>
+            }
+            else if (_result != null)
+            {
+                Console.WriteLine($"Result display block: _result != null, OutputFiles={_result.OutputFiles?.Count ?? 0}, _isProcessing={_isProcessing}");
+                <div class="alert @(_result.Success ? "alert-success" : "alert-danger") d-flex align-items-center">
+                    <span class="me-2">@(_result.Success ? "✓" : "✗")</span>
+                    <div>
+                        @if (!string.IsNullOrWhiteSpace(_result.MessageHtml))
+                        {
+                            <div>@((MarkupString)_result.MessageHtml)</div>
+                        }
+                        else
+                        {
+                            <div>@_result.Message</div>
+                        }
+                    </div>
+                </div>
+
+                @if (_result.OutputFiles != null && _result.OutputFiles.Any())
+                {
+                    Console.WriteLine($"OutputFiles block: Rendering {_result.OutputFiles.Count} files");
+                    <div class="mb-4">
+                        <h5 class="mb-3">📥 Download-Dateien:</h5>
+                        <div class="row g-3">
+                            @foreach (var output in _result.OutputFiles)
+                            {
+                                <div class="col-12">
+                                    <div class="card border-success">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="card-title mb-2">
+                                                        📄 <strong>@output.FileName</strong>
+                                                    </h6>
+                                                    @if (!string.IsNullOrEmpty(output.Hint))
+                                                    {
+                                                        <p class="text-muted small mb-2">@output.Hint</p>
+                                                    }
+                                                    <div class="d-flex gap-4 small text-muted">
+                                                        <div>
+                                                            <span class="text-dark fw-semibold">Größe:</span>
+                                                            @output.FormattedSize
+                                                        </div>
+                                                        @if (output.LineCount > 0)
+                                                        {
+                                                            <div>
+                                                                <span class="text-dark fw-semibold">Zeilen:</span>
+                                                                @output.LineCount
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-success ms-3" @onclick="() => DownloadFile(output)">
+                                                    ⬇️ Download
+                                                </button>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(output.ProcessingHint))
+                                            {
+                                                <details class="mt-2">
+                                                    <summary class="text-muted small" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
+                                                    <div class="alert alert-info mt-2 small" style="white-space: pre-line; font-size: 0.85em;">@output.ProcessingHint</div>
+                                                </details>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary btn-sm" @onclick="DownloadAllOutputs">⬇️ Alle herunterladen</button>
+                        </div>
+                    </div>
+                }
+
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-secondary" @onclick="Reset">🔄 Neue Verarbeitung</button>
+                    <button class="btn btn-outline-secondary" @onclick="HandleBackClicked">← Zurück zur Übersicht</button>
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(_previewHtml))
+            {
+                <h5>Vorschau</h5>
+                <div class="mb-3">
+                    <div class="card p-3">
+                        @((MarkupString)_previewHtml)
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" @onclick="ApplyMailaddresses">Weiter: Änderungen anwenden</button>
+                    <button class="btn btn-outline-secondary" @onclick="CancelPreview">Abbrechen</button>
+                </div>
+            }
+            else
             {
                 <h5>1. Dateien hochladen</h5>
                 
@@ -175,268 +294,149 @@
                         </div>
                     </div>
                 }
-            }
 
-            @* summary directly above the Dateien erstellen button *@
-            @if (!Config.InputFields.Any() && AllRequiredFilesUploaded())
-            {
-                <div class="mt-2">
-                    @if (!string.IsNullOrEmpty(_studentsSummaryError))
-                    {
-                        <div class="alert alert-danger small">Fehler beim Erstellen der Zusammenfassung: @_studentsSummaryError</div>
-                    }
-                    else if (_statusCounts != null && _statusCounts.Any())
-                    {
-                        <div class="alert alert-success small">Schüler insgesamt: @_builtStudentsCount, davon @_statusSummary</div>
-                    }
-                </div>
-
-                <div class="mt-4 d-flex gap-2 align-items-center">
-                    @if (!_isProcessing)
-                    {
-                        <button class="btn btn-primary btn-lg" @onclick="ProcessFiles">Dateien erstellen</button>
-                    }
-                    else
-                    {
-                        <div class="text-muted small mt-2">Verarbeitung läuft…</div>
-                    }
-                </div>
-            }
-            @if (Config.InputFields.Any() && AllRequiredFilesUploaded())
-            {
-                <h5 class="mt-4">2. Einstellungen vornehmen</h5>
-                @foreach (var field in Config.InputFields)
+                @* summary directly above the Dateien erstellen button *@
+                @if (!Config.InputFields.Any() && AllRequiredFilesUploaded())
                 {
-                    <div class="mb-3">
-                        <label class="form-label">
-                            @field.Label
-                            @if (!field.IsRequired)
+                    <div class="mt-2">
+                        @if (!string.IsNullOrEmpty(_studentsSummaryError))
+                        {
+                            <div class="alert alert-danger small">Fehler beim Erstellen der Zusammenfassung: @_studentsSummaryError</div>
+                        }
+                        else if (_statusCounts != null && _statusCounts.Any())
+                        {
+                            <div class="alert alert-success small">Schüler insgesamt: @_builtStudentsCount, davon @_statusSummary</div>
+                        }
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2 align-items-center">
+                        @if (!_isProcessing)
+                        {
+                            <button class="btn btn-primary btn-lg" @onclick="ProcessFiles">Dateien erstellen</button>
+                        }
+                        else
+                        {
+                            <div class="text-muted small mt-2">Verarbeitung läuft…</div>
+                        }
+                    </div>
+                }
+                @if (Config.InputFields.Any() && AllRequiredFilesUploaded())
+                {
+                    <h5 class="mt-4">2. Einstellungen vornehmen</h5>
+                    @foreach (var field in Config.InputFields)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">
+                                @field.Label
+                                @if (!field.IsRequired)
+                                {
+                                    <span class="badge bg-secondary ms-1">Optional</span>
+                                }
+                            </label>
+                            @if (!string.IsNullOrEmpty(field.Placeholder))
                             {
-                                <span class="badge bg-secondary ms-1">Optional</span>
+                                <small class="text-muted d-block mb-1">
+                                    💡 Hinweis: @field.Placeholder
+                                </small>
                             }
-                        </label>
-                        @if (!string.IsNullOrEmpty(field.Placeholder))
-                        {
-                            <small class="text-muted d-block mb-1">
-                                💡 Hinweis: @field.Placeholder
-                            </small>
-                        }
-                        <input type="text" 
-                               class="@GetFieldValidationClass(field)"
-                               placeholder="@field.Placeholder"
-                               @bind="field.Value" 
-                               @bind:event="oninput"
-                               @onblur="() => ValidateField(field)" />
-                        @if (_validationErrors.ContainsKey(field.Key))
-                        {
-                            <div class="invalid-feedback d-block">
-                                ❌ @_validationErrors[field.Key]
-                            </div>
-                        }
-                        else if (!string.IsNullOrWhiteSpace(field.Value) && field.IsRequired)
-                        {
-                            <div class="valid-feedback d-block">
-                                ✓ Eingabe gültig
-                            </div>
-                        }
-                        else if (field.IsRequired && string.IsNullOrWhiteSpace(field.Value))
-                        {
-                            <div class="text-muted small">
-                                ⚠️ Dieses Feld ist erforderlich
-                            </div>
-                        }
-                    </div>
-                }
-
-                <div class="mt-4 d-flex gap-2 align-items-center">
-                    @if (Config?.Id != "lernabschnittsdaten")
-                    {
-                        <button class="btn btn-outline-primary" @onclick="PreviewMailaddresses" disabled="@(!CanProcess())">Vorschau anzeigen</button>
-                        <div class="form-check ms-3">
-                            <input class="form-check-input" type="checkbox" id="onlyChangedCheck" @bind="OnlyChanged" />
-                            <label class="form-check-label" for="onlyChangedCheck">Nur neue und veränderte Zeilen ausgeben</label>
-                        </div>
-                    }
-                    <button class="btn btn-primary btn-lg" @onclick="ApplyMailaddresses" disabled="@(!CanProcess())">@GetPrimaryButtonLabel()</button>
-                    @if (!CanProcess())
-                    {
-                        <div class="text-muted small mt-2">
-                            @{ 
-                                if (!AllRequiredFilesUploaded())
-                                {
-                                    <text><span>⚠️ Bitte laden Sie alle benötigten Dateien hoch</span></text>
-                                }
-                                else if (!AllRequiredFieldsFilled())
-                                {
-                                    <text><span>⚠️ Bitte füllen Sie alle Pflichtfelder aus</span></text>
-                                }
-                                else if (_validationErrors.ContainsKey("file_linecount_mismatch"))
-                                {
-                                    <text><div class="text-danger">⚠️ @(_validationErrors["file_linecount_mismatch"])</div></text>
-                                }
-                                else if (_validationErrors.Any())
-                                {
-                                    <text><span>⚠️ Bitte korrigieren Sie die markierten Fehler</span></text>
-                                }
-                            }
-                        </div>
-                    }
-                </div>
-            }
-        }
-        else if (!_isProcessing && _result == null && !string.IsNullOrWhiteSpace(_previewHtml))
-        {
-            <h5>Vorschau</h5>
-            <div class="mb-3">
-                <div class="card p-3">
-                    @((MarkupString)_previewHtml)
-                </div>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary" @onclick="ApplyMailaddresses">Weiter: Änderungen anwenden</button>
-                <button class="btn btn-outline-secondary" @onclick="CancelPreview">Abbrechen</button>
-            </div>
-        }
-        else if (_isProcessing)
-        {
-            Console.WriteLine($"Progress bar block: _isProcessing={_isProcessing}, _result={_result != null}");
-            <div class="d-flex flex-column align-items-center justify-content-center" style="min-height:60vh;">
-                <div class="mb-4 text-center">
-                    <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
-                        <span class="visually-hidden">Verarbeitung läuft...</span>
-                    </div>
-                </div>
-                <h5 class="text-center">Dateien werden verarbeitet...</h5>
-                
-                @if (Config.ProcessingSteps.Any())
-                {
-                    <div class="mt-4 text-start" style="max-width: 500px; margin: 0 auto;">
-                        @for (int i = 0; i < Config.ProcessingSteps.Count; i++)
-                        {
-                            var step = Config.ProcessingSteps[i];
-                            var isCurrentStep = i == _currentProcessingStep;
-                            var isCompletedStep = i < _currentProcessingStep;
-                            
-
-                            <div class="d-flex align-items-center mb-2 @(isCurrentStep ? "text-primary fw-bold" : isCompletedStep ? "text-success" : "text-muted")">
-                                @if (isCompletedStep)
-                                {
-                                    <span class="me-2">✓</span>
-                                }
-                                else if (isCurrentStep)
-                                {
-                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-                                }
-                                else
-                                {
-                                    <span class="me-2">○</span>
-                                }
-                                <span>@step.Description</span>
-                            </div>
-                        }
-                    </div>
-                }
-                
-                <div class="progress mt-4" style="height: 30px; width: 60%; max-width: 500px; margin: 0 auto;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         role="progressbar" 
-                         style="width: @(_progressPercent)%"
-                         aria-valuenow="@_progressPercent" 
-                         aria-valuemin="0" 
-                         aria-valuemax="100">
-                        @_progressPercent%
-                    </div>
-                </div>
-                <small class="text-muted mt-2 d-block">@_progressMessage</small>
-            </div>
-        }
-        else if (_result != null)
-        {
-            Console.WriteLine($"Result display block: _result != null, OutputFiles={_result.OutputFiles?.Count ?? 0}, _isProcessing={_isProcessing}");
-            <div class="alert @(_result.Success ? "alert-success" : "alert-danger") d-flex align-items-center">
-                <span class="me-2">@(_result.Success ? "✓" : "✗")</span>
-                <div>
-                    @if (!string.IsNullOrWhiteSpace(_result.MessageHtml))
-                    {
-                        <div>@((MarkupString)_result.MessageHtml)</div>
-                    }
-                    else
-                    {
-                        <div>@_result.Message</div>
-                    }
-                </div>
-            </div>
-
-            @if (_result.OutputFiles != null && _result.OutputFiles.Any())
-            {
-                Console.WriteLine($"OutputFiles block: Rendering {_result.OutputFiles.Count} files");
-                <div class="mb-4">
-                    <h5 class="mb-3">📥 Download-Dateien:</h5>
-                    <div class="row g-3">
-                        @foreach (var output in _result.OutputFiles)
-                        {
-                            <div class="col-12">
-                                <div class="card border-success">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start mb-3">
-                                            <div class="flex-grow-1">
-                                                <h6 class="card-title mb-2">
-                                                    📄 <strong>@output.FileName</strong>
-                                                </h6>
-                                                @if (!string.IsNullOrEmpty(output.Hint))
-                                                {
-                                                    <p class="text-muted small mb-2">@output.Hint</p>
-                                                }
-                                                <div class="d-flex gap-4 small text-muted">
-                                                    <div>
-                                                        <span class="text-dark fw-semibold">Größe:</span>
-                                                        @output.FormattedSize
-                                                    </div>
-                                                    @if (output.LineCount > 0)
-                                                    {
-                                                        <div>
-                                                            <span class="text-dark fw-semibold">Zeilen:</span>
-                                                            @output.LineCount
-                                                        </div>
-                                                    }
-                                                </div>
-                                            </div>
-                                            <button class="btn btn-success ms-3" @onclick="() => DownloadFile(output)">
-                                                ⬇️ Download
-                                            </button>
-                                        </div>
-                                        @if (!string.IsNullOrEmpty(output.ProcessingHint))
-                                        {
-                                            <details class="mt-2">
-                                                <summary class="text-muted small" style="cursor: pointer;">ℹ️ Wie verwende ich diese Datei?</summary>
-                                                <div class="alert alert-info mt-2 small" style="white-space: pre-line; font-size: 0.85em;">@output.ProcessingHint</div>
-                                            </details>
-                                        }
-                                    </div>
+                            <input type="text" 
+                                   class="@GetFieldValidationClass(field)"
+                                   placeholder="@field.Placeholder"
+                                   @bind="field.Value" 
+                                   @bind:event="oninput"
+                                   @onblur="() => ValidateField(field)" />
+                            @if (_validationErrors.ContainsKey(field.Key))
+                            {
+                                <div class="invalid-feedback d-block">
+                                    ❌ @_validationErrors[field.Key]
                                 </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(field.Value) && field.IsRequired)
+                            {
+                                <div class="valid-feedback d-block">
+                                    ✓ Eingabe gültig
+                                </div>
+                            }
+                            else if (field.IsRequired && string.IsNullOrWhiteSpace(field.Value))
+                            {
+                                <div class="text-muted small">
+                                    ⚠️ Dieses Feld ist erforderlich
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <div class="mt-4 d-flex gap-2 align-items-center">
+                        @if (Config?.Id != "lernabschnittsdaten")
+                        {
+                            <button class="btn btn-outline-primary" @onclick="PreviewMailaddresses" disabled="@(!CanProcess())">Vorschau anzeigen</button>
+                            <div class="form-check ms-3">
+                                <input class="form-check-input" type="checkbox" id="onlyChangedCheck" @bind="OnlyChanged" />
+                                <label class="form-check-label" for="onlyChangedCheck">Nur neue und veränderte Zeilen ausgeben</label>
+                            </div>
+                        }
+                        <button class="btn btn-primary btn-lg" @onclick="HandlePrimaryClick" disabled="@(!CanProcess())">@GetPrimaryButtonLabel()</button>
+                        @if (!CanProcess())
+                        {
+                            <div class="text-muted small mt-2">
+                                @{ 
+                                    if (!AllRequiredFilesUploaded())
+                                    {
+                                        <text><span>⚠️ Bitte laden Sie alle benötigten Dateien hoch</span></text>
+                                    }
+                                    else if (!AllRequiredFieldsFilled())
+                                    {
+                                        <text><span>⚠️ Bitte füllen Sie alle Pflichtfelder aus</span></text>
+                                    }
+                                    else if (_validationErrors.ContainsKey("file_linecount_mismatch"))
+                                    {
+                                        <text><div class="text-danger">⚠️ @(_validationErrors["file_linecount_mismatch"])</div></text>
+                                    }
+                                    else if (_validationErrors.Any())
+                                    {
+                                        <text><span>⚠️ Bitte korrigieren Sie die markierten Fehler</span></text>
+                                    }
+                                }
                             </div>
                         }
                     </div>
-                    <div class="mt-3">
-                        <button class="btn btn-outline-primary btn-sm" @onclick="DownloadAllOutputs">⬇️ Alle herunterladen</button>
-                    </div>
-                </div>
+                }
             }
-
-            <div class="d-flex gap-2 mt-4">
-                <button class="btn btn-secondary" @onclick="Reset">🔄 Neue Verarbeitung</button>
-                <button class="btn btn-outline-secondary" @onclick="HandleBackClicked">← Zurück zur Übersicht</button>
-            </div>
-        }
-        else
-        {
-            <div class="alert alert-danger">Fehler: Komponente nicht initialisiert.</div>
         }
     </div>
 </div>
 
 
 @code {
+    [Parameter] public FunctionConfig Config { get; set; } = null!;
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Config == null)
+        {
+            Console.WriteLine("Error: FunctionProcessor Config is null!");
+            return;
+        }
+        Reset();
+        base.OnParametersSet();
+    }
+
+    private async Task DownloadAllOutputs()
+    {
+        try
+        {
+            if (_result == null || _result.OutputFiles == null || !_result.OutputFiles.Any()) return;
+            foreach (var of in _result.OutputFiles)
+            {
+                if (of?.Content == null) continue;
+                var base64 = Convert.ToBase64String(of.Content);
+                await JS.InvokeVoidAsync("downloadFile", of.FileName, base64);
+            }
+        }
+        catch { }
+    }
+
     private async Task HandleBackClicked()
     {
         // ensure UI state and stored bytes are cleared
@@ -1070,7 +1070,7 @@
                     // Für Webuntis zur separaten Download-Seite navigieren
                     try { Nav.NavigateTo($"/downloads/{Config.Id}"); } catch { }
                 }
-                else
+                else if (Config.Id != "lernabschnittsdaten")
                 {
                     // Für andere Funktionen optional: sofortiger Download
                     await DownloadAllOutputs();
@@ -1189,6 +1189,13 @@
         return Config?.Id == "lernabschnittsdaten"
             ? "Fehlzeiten in Lernabschnittsdaten eintragen"
             : Config?.SubmitButtonLabel ?? "Dateien erstellen";
+    }
+
+    private Task HandlePrimaryClick()
+    {
+        return Config?.Id == "lernabschnittsdaten"
+            ? ProcessFiles()
+            : ApplyMailaddresses();
     }
 
     private async Task ApplyMailaddresses()
