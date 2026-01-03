@@ -2,26 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Dev Server (coreclr)",
-      "type": "coreclr",
+      "name": "Run restart.sh (default)",
+      "type": "node",
       "request": "launch",
-      "preLaunchTask": "build-wasm",
-      "program": "dotnet",
-      "args": [
-        "run",
-        "--configuration",
-        "Debug"
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "${workspaceFolder}/restart.sh"
       ],
-      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "env": {
-        "ASPNETCORE_URLS": "http://127.0.0.1:5005"
-      },
-      "serverReadyAction": {
-        "pattern": "App url:\\s+http://127\\.0\\.0\\.1:(\\d+)/",
-        "uriFormat": "http://127.0.0.1:%s/",
-        "action": "openExternally"
-      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -74,14 +62,31 @@
       }
     },
     {
-      "name": "Run restart.sh",
-      "type": "node",
+      "name": "Run Dev Server (coreclr)",
+      "type": "coreclr",
       "request": "launch",
-      "runtimeExecutable": "bash",
-      "runtimeArgs": [
-        "${workspaceFolder}/restart.sh"
+      "preLaunchTask": "build-wasm",
+      "program": "dotnet",
+      "args": [
+        "run",
+        "--configuration",
+        "Debug"
       ],
-      "console": "integratedTerminal"
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "env": {
+        "ASPNETCORE_URLS": "http://127.0.0.1:5005"
+      },
+      "serverReadyAction": {
+        "pattern": "App url:\\s+http://127\\.0\\.0\\.1:(\\d+)/",
+        "uriFormat": "http://127.0.0.1:%s/",
+        "action": "openExternally"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false
+      }
     }
   ],
   "compounds": [

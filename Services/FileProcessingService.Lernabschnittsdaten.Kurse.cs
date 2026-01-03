@@ -255,7 +255,7 @@ public partial class FileProcessingService
                 var fields = new List<string>();
                 
                 // KursBez (max 20 Zeichen)
-                fields.Add(EscapeCsv(kurs.KursBez.Length > 20 ? kurs.KursBez.Substring(0, 20) : kurs.KursBez));
+                fields.Add(kurs.KursBez.Length > 20 ? kurs.KursBez.Substring(0, 20) : kurs.KursBez);
                 
                 // Klasse (leer, da Schülergruppen verwendet)
                 fields.Add("");
@@ -270,7 +270,7 @@ public partial class FileProcessingService
                 fields.Add("");
                 
                 // Fach
-                fields.Add(EscapeCsv(kurs.Fach));
+                fields.Add(kurs.Fach);
                 
                 // Kursart (Standard: "LK" für Leistungskurs, kann aus GPU002 erweitert werden)
                 fields.Add("LK");
@@ -282,7 +282,7 @@ public partial class FileProcessingService
                 fields.Add(kurs.KursleiterWochenstunden.ToString());
                 
                 // Kursleiter
-                fields.Add(EscapeCsv(kurs.Kursleiter));
+                fields.Add(kurs.Kursleiter);
                 
                 // Epochenunterricht (leer)
                 fields.Add("");
@@ -348,18 +348,27 @@ public partial class FileProcessingService
 
         var result = new List<Dictionary<string, string>>();
 
-        foreach (var line in lines)
-        {
-            var fields = SplitRow(line, delimiter, quote);
-            var dict = new Dictionary<string, string>();
-
-            for (int i = 0; i < fields.Length; i++)
+            string StripOuterQuotes(string? val)
             {
-                dict[$"Field{i + 1}"] = fields[i]?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(val)) return string.Empty;
+                var trimmed = val.Trim();
+                if (trimmed.Length >= 2 && trimmed.StartsWith('"') && trimmed.EndsWith('"'))
+                    return trimmed[1..^1];
+                return trimmed;
             }
 
-            result.Add(dict);
-        }
+            foreach (var line in lines)
+            {
+                var fields = SplitRow(line, delimiter, quote);
+                var dict = new Dictionary<string, string>();
+
+                for (int i = 0; i < fields.Length; i++)
+                {
+                    dict[$"Field{i + 1}"] = StripOuterQuotes(fields[i]);
+                }
+
+                result.Add(dict);
+            }
 
         return result;
     }

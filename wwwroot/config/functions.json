@@ -242,7 +242,7 @@
         { "fileKey": "kurse_gpu002", "fileName": "GPU002_Parsed.csv", "hint": "GPU002.txt als CSV zur Kontrolle" }
       ],
       "testFiles": [
-        "/testfiles/kurse/Fall_1_Kurse.dat",
+        "/testfiles/kurse/Fall_1_Kurse_ein_kursleiter.dat",
         "/testfiles/kurse/Fall_1_GPU002.txt",
         "/testfiles/kurse/Fall_1_SchuelerBasisdaten.dat",
         "/testfiles/kurse/Fall_1_SchuelerZusatzdaten.dat",
