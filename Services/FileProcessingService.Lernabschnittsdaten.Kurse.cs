@@ -114,7 +114,6 @@ public partial class FileProcessingService
                 record.ContainsKey("Field6") ? record["Field6"] : string.Empty).ToList();
 
             var kursunterrichte = new List<Kursunterricht>();
-            var nichtKursunterrichte = new List<Kursunterricht>();
 
             foreach (var record in gpu002)
             {
@@ -196,40 +195,7 @@ public partial class FileProcessingService
                         kurs.Wochenstunden += wochenstundenLehrkraft;
                     }
                 }
-                else
-                {
-                    // Nicht-Kursunterricht
-                    var nichtKurs = nichtKursunterrichte.FirstOrDefault(u =>
-                        BereinigenFach(u.Fach) == BereinigenFach(fach) &&
-                        u.Kursleiter == lehrer &&
-                        u.Schülergruppe == schuelergruppe &&
-                        u.Klassen.Contains(klasse));
-
-                    if (nichtKurs == null)
-                    {
-                        nichtKurs = new Kursunterricht
-                        {
-                            Fach = fach,
-                            Schülergruppe = schuelergruppe,
-                            Klassen = new List<string> { klasse },
-                            Kursleiter = lehrer,
-                            KursleiterWochenstunden = wochenstundenLehrkraft,
-                            Wochenstunden = wochenstundenLehrkraft,
-                            UnterrichtsIds = new List<string> { unterrichtsId },
-                            Lehrkräfte = new List<string> { lehrer },
-                            LehrkräfteWochenstunden = new List<int> { wochenstundenLehrkraft }
-                        };
-                        nichtKursunterrichte.Add(nichtKurs);
-                    }
-                    else
-                    {
-                        if (!nichtKurs.UnterrichtsIds.Contains(unterrichtsId))
-                            nichtKurs.UnterrichtsIds.Add(unterrichtsId);
-                        
-                        nichtKurs.KursleiterWochenstunden += wochenstundenLehrkraft;
-                        nichtKurs.Wochenstunden += wochenstundenLehrkraft;
-                    }
-                }
+                // Nicht-Kursunterrichte werden ignoriert
             }
 
             // Kurse.dat erstellen
@@ -318,7 +284,7 @@ public partial class FileProcessingService
                 }
             };
 
-            result.Message = $"{kursunterrichte.Count} Kursunterrichte und {nichtKursunterrichte.Count} Nicht-Kursunterrichte verarbeitet.";
+            result.Message = $"{kursunterrichte.Count} Kursunterrichte verarbeitet.";
 
             return result;
         }

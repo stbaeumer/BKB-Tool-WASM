@@ -246,7 +246,12 @@
         "/testfiles/kurse/Fall_1_GPU002.txt",
         "/testfiles/kurse/Fall_1_SchuelerBasisdaten.dat",
         "/testfiles/kurse/Fall_1_SchuelerZusatzdaten.dat",
-        "/testfiles/kurse/Fall_1_StudentgroupStudents.csv"
+        "/testfiles/kurse/Fall_1_StudentgroupStudents.csv",
+        "/testfiles/kurse/Fall_2_Kurse_mehrere_Untisunterrichte.dat",
+        "/testfiles/kurse/Fall_2_GPU002.txt",
+        "/testfiles/kurse/Fall_2_SchuelerBasisdaten.dat",
+        "/testfiles/kurse/Fall_2_SchuelerZusatzdaten.dat",
+        "/testfiles/kurse/Fall_2_StudentgroupStudents.csv"
       ]
     },
     {
