@@ -367,7 +367,7 @@
                     }
 
                     <div class="mt-4 d-flex gap-2 align-items-center">
-                        @if (Config?.Id != "lernabschnittsdaten")
+                        @if (Config?.Id != "mailadresse-setzen" && Config?.Id != "lernabschnittsdaten")
                         {
                             <button class="btn btn-outline-primary" @onclick="PreviewMailaddresses" disabled="@(!CanProcess())">Vorschau anzeigen</button>
                             <div class="form-check ms-3">

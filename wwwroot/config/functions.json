@@ -126,7 +126,9 @@
       "optionalFiles": [],
       "inputFields": [],
       "processingSteps": [
-        { "functionName": "webuntis-export", "description": "Erzeuge Webuntis/Geevoo/Littera Exporte" }
+        { "functionName": "LoadInputs", "description": "Eingabedateien einlesen" },
+        { "functionName": "BuildExports", "description": "Schüler, Betriebe und Erzieher zusammenstellen" },
+        { "functionName": "WriteOutput", "description": "Exportdateien erzeugen" }
       ],
       "submitButtonLabel": "Exporte erzeugen",
       "successMessage": "Exportdateien wurden erzeugt und im Downloads-Ordner abgelegt.",
