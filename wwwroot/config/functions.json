@@ -161,6 +161,80 @@
       ]
     },
     {
+      "id": "kurse",
+      "name": "Kurse",
+      "description": "Generiert Kurslisten und Schülerzuordnungen aus kurse.dat, GPU002.txt und studentgroupstudents.csv.",
+      "functionHint": "Verwendet SchILD-Kursdateien (kurse.dat), GPU002.txt sowie die WebUntis-Gruppenzuordnungen (studentgroupstudents.csv). Schüler werden über Namen aus den Basis-/Zusatzdaten gematcht. Falls Gruppenbezeichnungen nicht eindeutig sind, können Nachbearbeitungen nötig sein.",
+      "requiredFiles": [
+        {
+          "name": "kurse",
+          "allowedExtensions": [".dat"],
+          "fileKey": "kurse",
+          "hasHeader": true,
+          "delimiter": "|",
+          "encoding": "utf-8",
+          "sourceHint": "SchILD-NRW Kursdatei (kurse.dat) aus dem Export."
+        },
+        {
+          "name": "GPU002",
+          "allowedExtensions": [".txt"],
+          "fileKey": "gpu002",
+          "hasHeader": false,
+          "delimiter": "|",
+          "encoding": "utf-8",
+          "sourceHint": "SchILD-NRW GPU002.txt (ohne Kopfzeile)."
+        },
+        {
+          "name": "SchuelerBasisdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "basisdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        },
+        {
+          "name": "SchuelerZusatzdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "zusatzdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        },
+        {
+          "name": "studentgroupstudents",
+          "allowedExtensions": [".csv"],
+          "fileKey": "studentgroupstudents",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Webuntis -> Administration -> Export: studentgroupstudents.csv"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [],
+      "processingSteps": [
+        { "functionName": "LoadInputs", "description": "Eingabedateien einlesen" },
+        { "functionName": "BuildCourses", "description": "Kurslisten und Zuordnungen erstellen" },
+        { "functionName": "WriteOutput", "description": "Exportdateien erzeugen" }
+      ],
+      "submitButtonLabel": "Kurse generieren",
+      "successMessage": "Kurse wurden erstellt.",
+      "outputFiles": [
+        { "fileKey": "kurse_export", "fileName": "Kurse.csv", "hint": "Bereinigte Kursliste aus kurse.dat" },
+        { "fileKey": "kurse_studentzuordnungen", "fileName": "Kurse_Studentzuordnungen.csv", "hint": "Zuordnung Schüler -> Kurs/Gruppe (aus studentgroupstudents.csv)" },
+        { "fileKey": "kurse_gpu002", "fileName": "GPU002_Parsed.csv", "hint": "GPU002.txt als CSV zur Kontrolle" }
+      ],
+      "testFiles": [
+        "/testfiles/kurse/Fall_1_Kurse.dat",
+        "/testfiles/kurse/Fall_1_GPU002.txt",
+        "/testfiles/kurse/Fall_1_SchuelerBasisdaten.dat",
+        "/testfiles/kurse/Fall_1_SchuelerZusatzdaten.dat",
+        "/testfiles/kurse/Fall_1_StudentgroupStudents.csv"
+      ]
+    },
+    {
       "id": "lernabschnittsdaten",
       "name": "Lernabschnittsdaten",
       "description": "Ergänzt Fehlstundendaten in den Lernabschnittsdaten basierend auf der Absence-Liste von Webuntis.",

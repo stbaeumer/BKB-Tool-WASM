@@ -102,6 +102,10 @@ internal partial class Program
         {
             result = await svc.ProcessWebuntis(filesForProcessing, inputs);
         }
+        else if (string.Equals(selected.Id, "kurse", StringComparison.OrdinalIgnoreCase))
+        {
+            result = await svc.ProcessKurse(filesForProcessing, inputs, selected);
+        }
         else
         {
             Console.Error.WriteLine($"Unbekannte Funktion: {selected.Id}");
@@ -174,6 +178,9 @@ internal partial class Program
             // Heuristik zur Zuordnung
             string? key = fileName switch
             {
+                var s when s.Contains("kurse", StringComparison.OrdinalIgnoreCase) => "kurse",
+                var s when s.Contains("gpu002", StringComparison.OrdinalIgnoreCase) => "gpu002",
+                var s when s.Contains("studentgroupstudents", StringComparison.OrdinalIgnoreCase) => "studentgroupstudents",
                 // Erlaube auch Präfixe wie "Fall_1_Student_..."
                 var s when s.Contains("Student_", StringComparison.OrdinalIgnoreCase) => "students",
                 var s when s.Contains("SchuelerBasisdaten", StringComparison.OrdinalIgnoreCase) => "basisdaten",

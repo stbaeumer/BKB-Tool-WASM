@@ -20,6 +20,9 @@
     <Compile Include="../Services/FileProcessingService.cs" Link="Services/FileProcessingService.cs" />
     <Compile Include="../Services/FileProcessingService.MailadresseSetzen.cs" Link="Services/FileProcessingService.MailadresseSetzen.cs" />
     <Compile Include="../Services/FileProcessingService.Webuntis.cs" Link="Services/FileProcessingService.Webuntis.cs" />
+    <Compile Include="../Services/FileProcessingService.Lernabschnittsdaten.cs" Link="Services/FileProcessingService.Lernabschnittsdaten.cs" />
+    <Compile Include="../Services/FileProcessingService.Lernabschnittsdaten.Process.cs" Link="Services/FileProcessingService.Lernabschnittsdaten.Process.cs" />
+    <Compile Include="../Services/FileProcessingService.Kurse.cs" Link="Services/FileProcessingService.Kurse.cs" />
   </ItemGroup>
 
 </Project>
