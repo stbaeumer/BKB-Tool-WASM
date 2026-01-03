@@ -19,7 +19,7 @@
                         <i class="bi bi-info-circle text-muted" style="font-size:1rem;"></i>
                     </button>
                 }
-                @if (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co" || Config?.Id == "lernabschnittsdaten" || Config?.Id == "kurse")
+                @if (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co" || Config?.Id == "lernabschnittsdaten" || Config?.Id == "Kurse")
                 {
                     <button type="button" class="btn btn-sm btn-link p-0 ms-2" @onclick="ToggleTestFiles" title="Testen Sie die Funktion mit diesen Testdateien" aria-pressed="@_showTestFiles" aria-label="Testdateien anzeigen">
                         <i class="bi bi-bug text-muted" style="font-size:1rem;"></i>
@@ -196,7 +196,7 @@
             {
                 <h5>1. Dateien hochladen</h5>
                 
-                @if (_showTestFiles && (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co" || Config?.Id == "lernabschnittsdaten" || Config?.Id == "kurse"))
+                @if (_showTestFiles && (Config?.Id == "mailadresse-setzen" || Config?.Id == "webuntis-co" || Config?.Id == "lernabschnittsdaten" || Config?.Id == "Kurse"))
                 {
                     <div class="card mb-3 bg-light">
                         <div class="card-body">
@@ -322,9 +322,16 @@
                 }
                 @if (Config.InputFields.Any() && AllRequiredFilesUploaded())
                 {
-                    <h5 class="mt-4">2. Einstellungen vornehmen</h5>
                     @foreach (var field in Config.InputFields)
                     {
+                        @if (!string.IsNullOrEmpty(field.Instructions))
+                        {
+                            <h5 class="mt-4">@field.Instructions</h5>
+                        }
+                        else if (field == Config.InputFields.First())
+                        {
+                            <h5 class="mt-4">2. Einstellungen vornehmen</h5>
+                        }
                         <div class="mb-3">
                             <label class="form-label">
                                 @field.Label
@@ -339,12 +346,28 @@
                                     💡 Hinweis: @field.Placeholder
                                 </small>
                             }
-                            <input type="text" 
-                                   class="@GetFieldValidationClass(field)"
-                                   placeholder="@field.Placeholder"
-                                   @bind="field.Value" 
-                                   @bind:event="oninput"
-                                   @onblur="() => ValidateField(field)" />
+                            @if (field.Type == "select")
+                            {
+                                <select class="@GetFieldValidationClass(field)" @bind="field.Value" @onblur="() => ValidateField(field)">
+                                    <option value="">-- Bitte wählen --</option>
+                                    @if (field.Options != null)
+                                    {
+                                        @foreach (var option in field.Options)
+                                        {
+                                            <option value="@option.Value">@option.Label</option>
+                                        }
+                                    }
+                                </select>
+                            }
+                            else
+                            {
+                                <input type="text" 
+                                       class="@GetFieldValidationClass(field)"
+                                       placeholder="@field.Placeholder"
+                                       @bind="field.Value" 
+                                       @bind:event="oninput"
+                                       @onblur="() => ValidateField(field)" />
+                            }
                             @if (_validationErrors.ContainsKey(field.Key))
                             {
                                 <div class="invalid-feedback d-block">
@@ -367,7 +390,7 @@
                     }
 
                     <div class="mt-4 d-flex gap-2 align-items-center">
-                        @if (Config?.Id != "mailadresse-setzen" && Config?.Id != "lernabschnittsdaten")
+                        @if (Config?.Id != "mailadresse-setzen" && Config?.Id != "lernabschnittsdaten" && Config?.Id != "Kurse")
                         {
                             <button class="btn btn-outline-primary" @onclick="PreviewMailaddresses" disabled="@(!CanProcess())">Vorschau anzeigen</button>
                             <div class="form-check ms-3">
@@ -1036,10 +1059,10 @@
             Console.WriteLine("ProcessFiles: Calling ProcessWebuntis");
             _result = await ProcessingService.ProcessWebuntis(allFiles, inputs);
         }
-        else if (Config.Id == "kurse")
+        else if (Config.Id == "Kurse")
         {
-            Console.WriteLine("ProcessFiles: Calling ProcessKurse");
-            _result = await ProcessingService.ProcessKurse(allFiles, inputs, Config);
+            Console.WriteLine("ProcessFiles: Calling ProcessKursunterrichte");
+            _result = await ProcessingService.ProcessKursunterrichte(allFiles, inputs, Config);
         }
         else if (Config.Id == "lernabschnittsdaten")
         {
@@ -1232,9 +1255,9 @@
         {
             _result = await ProcessingService.ProcessWebuntis(allFiles, inputs);
         }
-        else if (Config.Id == "kurse")
+        else if (Config.Id == "Kurse")
         {
-            _result = await ProcessingService.ProcessKurse(allFiles, inputs, Config);
+            _result = await ProcessingService.ProcessKursunterrichte(allFiles, inputs, Config);
         }
         else
         {

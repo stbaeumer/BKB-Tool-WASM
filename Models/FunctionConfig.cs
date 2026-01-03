@@ -55,12 +55,21 @@ public class InputField
     public string Label { get; set; } = string.Empty;
     public string Placeholder { get; set; } = string.Empty;
     public string DefaultValue { get; set; } = string.Empty;
+    public string Type { get; set; } = "text";
+    public List<SelectOption> Options { get; set; } = new();
     public string ValidationRegex { get; set; } = string.Empty;
     public string ValidationErrorMessage { get; set; } = string.Empty;
+    public string Instructions { get; set; } = string.Empty;
     public bool IsRequired { get; set; } = true;
     
     // Runtime-Property (nicht in JSON)
     public string Value { get; set; } = string.Empty;
+}
+
+public class SelectOption
+{
+    public string Value { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 }
 
 public class ProcessingStep

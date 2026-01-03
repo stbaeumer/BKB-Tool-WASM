@@ -161,15 +161,15 @@
       ]
     },
     {
-      "id": "kurse",
+      "id": "Kurse",
       "name": "Kurse",
       "description": "Generiert Kurslisten und Schülerzuordnungen aus kurse.dat, GPU002.txt und studentgroupstudents.csv.",
       "functionHint": "Verwendet SchILD-Kursdateien (kurse.dat), GPU002.txt sowie die WebUntis-Gruppenzuordnungen (studentgroupstudents.csv). Schüler werden über Namen aus den Basis-/Zusatzdaten gematcht. Falls Gruppenbezeichnungen nicht eindeutig sind, können Nachbearbeitungen nötig sein.",
       "requiredFiles": [
         {
-          "name": "kurse",
+          "name": "Kurse",
           "allowedExtensions": [".dat"],
-          "fileKey": "kurse",
+          "fileKey": "Kurse",
           "hasHeader": true,
           "delimiter": "|",
           "encoding": "utf-8",
@@ -213,7 +213,22 @@
         }
       ],
       "optionalFiles": [],
-      "inputFields": [],
+      "inputFields": [
+        {
+          "name": "Abschnitt",
+          "key": "abschnitt",
+          "type": "select",
+          "required": true,
+          "options": [
+            { "value": "1", "label": "1. Abschnitt" },
+            { "value": "2", "label": "2. Abschnitt" },
+            { "value": "3", "label": "3. Abschnitt" },
+            { "value": "4", "label": "4. Abschnitt" }
+          ],
+          "hint": "Schulischer Abschnitt (1-4)",
+          "instructions": "2. Einstellungen vornehmen"
+        }
+      ],
       "processingSteps": [
         { "functionName": "LoadInputs", "description": "Eingabedateien einlesen" },
         { "functionName": "BuildCourses", "description": "Kurslisten und Zuordnungen erstellen" },
@@ -222,7 +237,7 @@
       "submitButtonLabel": "Kurse generieren",
       "successMessage": "Kurse wurden erstellt.",
       "outputFiles": [
-        { "fileKey": "kurse_export", "fileName": "Kurse.csv", "hint": "Bereinigte Kursliste aus kurse.dat" },
+        { "fileKey": "kurse_export", "fileName": "Kurse.dat", "hint": "Neue Kurse.dat zum Import in SchILD-NRW" },
         { "fileKey": "kurse_studentzuordnungen", "fileName": "Kurse_Studentzuordnungen.csv", "hint": "Zuordnung Schüler -> Kurs/Gruppe (aus studentgroupstudents.csv)" },
         { "fileKey": "kurse_gpu002", "fileName": "GPU002_Parsed.csv", "hint": "GPU002.txt als CSV zur Kontrolle" }
       ],
