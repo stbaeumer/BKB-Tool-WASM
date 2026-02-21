@@ -20,7 +20,6 @@
           "net10.0"
         ],
         "sources": {
-          "/usr/share/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -77,7 +76,7 @@
             "Microsoft.NET.Sdk.WebAssembly.Pack": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.1, )",
+              "version": "[10.0.0, )",
               "autoReferenced": true
             },
             "System.Text.Encoding.CodePages": {
@@ -98,8 +97,8 @@
           "warn": true,
           "downloadDependencies": [
             {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[10.0.1, 10.0.1]"
+              "name": "Microsoft.NETCore.App.Runtime.Mono.browser-wasm",
+              "version": "[10.0.0, 10.0.0]"
             }
           ],
           "frameworkReferences": {

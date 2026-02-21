@@ -30,10 +30,10 @@
         {
           "key": "mailDomain",
           "label": "Mail-Domain",
-          "placeholder": "@students.meine-schule.de",
-          "defaultValue": "@students.meine-schule.de",
+          "placeholder": "@students.berufskolleg-borken.de",
+          "defaultValue": "@students.berufskolleg-borken.de",
           "validationRegex": "^@?[^\\s@]+\\.[^\\s@]+$",
-          "validationErrorMessage": "Bitte eine gültige Domain angeben (z. B. @students.meine-schule.de)",
+          "validationErrorMessage": "Bitte eine gültige Domain angeben (z. B. @students.berufskolleg-borken.dede)",
           "isRequired": true
         }
       ],
