@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Text.Encodings.Web.dll
-449498EA-7EDC-4DE9-B83F-2797F59A9AD5
+1F98D35F-9079-493E-88EA-768EAABEEB3A
 6000001
 6000002
 6000003

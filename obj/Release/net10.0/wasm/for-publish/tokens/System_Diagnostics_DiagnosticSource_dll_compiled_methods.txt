@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Diagnostics.DiagnosticSource.dll
-E3843B77-4E66-43FD-B10C-B285A926EC02
+0B616F98-5A35-4A6C-BE5D-3AFEABA8CD49
 6000001
 6000002
 6000003

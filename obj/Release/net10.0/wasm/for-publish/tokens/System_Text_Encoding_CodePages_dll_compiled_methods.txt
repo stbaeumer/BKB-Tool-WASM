@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Text.Encoding.CodePages.dll
-917ADEDF-B4BA-4DBD-9D23-6DCAE79FF317
+2D0B194B-0DFC-4C1E-B7A1-3C462F42D5A6
 6000001
 6000002
 6000003

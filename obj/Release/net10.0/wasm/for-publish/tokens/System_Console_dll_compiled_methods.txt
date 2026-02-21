@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Console.dll
-4B3D3B83-83EB-42BD-987A-D3BEEB9859F4
+2A4A5673-51AC-42B7-A197-C06A8C167F23
 6000001
 6000004
 6000005

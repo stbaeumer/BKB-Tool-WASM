@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Runtime.InteropServices.JavaScript.dll
-3D174881-60BC-49FA-BB81-E9E6C2C2F417
+CD8840B6-F331-40CA-927B-4D23B4A067DC
 600000b
 600000c
 600000d

@@ -25,13 +25,12 @@
     <DebugSymbols>false</DebugSymbols>
     <!-- Assemblies trimmen, reduziert Download-Größe -->
     <PublishTrimmed>true</PublishTrimmed>
-    <!-- AOT für schnellere Laufzeit (längerer Build) -->
-    <RunAOTCompilation>true</RunAOTCompilation>
+    <!-- AOT deaktiviert für schnellere Dev-Builds (bei Bedarf aktivieren mit -p:RunAOTCompilation=true) -->
+    <RunAOTCompilation>false</RunAOTCompilation>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
     <PackageReference Include="Microsoft.JSInterop" Version="10.0.0" />
   </ItemGroup>

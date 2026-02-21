@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Drawing.Primitives.dll
-67E27560-CC7A-466D-A030-057155C22137
+71DE30EA-C2A9-451E-8C92-258E52BA1694
 6000001
 6000002
 6000003

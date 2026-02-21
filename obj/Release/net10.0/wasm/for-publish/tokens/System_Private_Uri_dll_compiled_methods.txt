@@ -1,5 +1,5 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/wasm/for-publish/aot-in/System.Private.Uri.dll
-2CF19427-A29A-46D4-9F6D-9E2D00CEFF1C
+9B2CCCE1-85AB-49CC-B7EC-E362FA47D0F4
 6000001
 6000002
 6000003

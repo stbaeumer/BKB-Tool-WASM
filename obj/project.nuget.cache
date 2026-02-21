@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "QZzzaUF+4mY=",
+  "dgSpecHash": "k40Tw72mwKA=",
   "success": true,
   "projectFilePath": "/workspaces/BKB-Tool-WASM/BKBToolClient.csproj",
   "expectedPackageFiles": [
@@ -13,7 +13,6 @@
     "/home/codespace/.nuget/packages/microsoft.aspnetcore.components.web/10.0.0/microsoft.aspnetcore.components.web.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.aspnetcore.components.webassembly/10.0.0/microsoft.aspnetcore.components.webassembly.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.aspnetcore.metadata/10.0.0/microsoft.aspnetcore.metadata.10.0.0.nupkg.sha512",
-    "/home/codespace/.nuget/packages/microsoft.dotnet.hotreload.webassembly.browser/10.0.100/microsoft.dotnet.hotreload.webassembly.browser.10.0.100.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.extensions.configuration/10.0.0/microsoft.extensions.configuration.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.extensions.configuration.abstractions/10.0.0/microsoft.extensions.configuration.abstractions.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.extensions.configuration.binder/10.0.0/microsoft.extensions.configuration.binder.10.0.0.nupkg.sha512",
@@ -36,22 +35,7 @@
     "/home/codespace/.nuget/packages/microsoft.jsinterop.webassembly/10.0.0/microsoft.jsinterop.webassembly.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.net.illink.tasks/10.0.0/microsoft.net.illink.tasks.10.0.0.nupkg.sha512",
     "/home/codespace/.nuget/packages/microsoft.net.sdk.webassembly.pack/10.0.3/microsoft.net.sdk.webassembly.pack.10.0.3.nupkg.sha512",
-    "/home/codespace/.nuget/packages/system.text.encoding.codepages/7.0.0/system.text.encoding.codepages.7.0.0.nupkg.sha512",
-    "/home/codespace/.nuget/packages/microsoft.netcore.app.ref/10.0.3/microsoft.netcore.app.ref.10.0.3.nupkg.sha512",
-    "/home/codespace/.nuget/packages/microsoft.netcore.app.runtime.mono.browser-wasm/10.0.3/microsoft.netcore.app.runtime.mono.browser-wasm.10.0.3.nupkg.sha512"
+    "/home/codespace/.nuget/packages/microsoft.netcore.app.ref/10.0.3/microsoft.netcore.app.ref.10.0.3.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1510",
-      "level": "Warning",
-      "message": "PackageReference System.Text.Encoding.CodePages will not be pruned. Consider removing this package from your dependencies, as it is likely unnecessary.",
-      "projectPath": "/workspaces/BKB-Tool-WASM/BKBToolClient.csproj",
-      "warningLevel": 1,
-      "filePath": "/workspaces/BKB-Tool-WASM/BKBToolClient.csproj",
-      "libraryId": "System.Text.Encoding.CodePages",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    }
-  ]
+  "logs": []
 }
