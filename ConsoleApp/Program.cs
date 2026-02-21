@@ -109,7 +109,6 @@ internal partial class Program
                 if (string.IsNullOrWhiteSpace(v)) v = def;
                 inputs[f.Key] = v ?? string.Empty;
             }
-
             
             // Verarbeitung ausführen
             var svc = new FileProcessingService();

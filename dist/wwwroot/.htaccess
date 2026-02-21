@@ -1,15 +1,61 @@
+<IfModule mod_mime.c>
+  # Set correct MIME types
+  AddType application/wasm .wasm
+  AddType application/javascript .js
+  AddType text/html .html
+  
+  # Handle pre-compressed files
+  <FilesMatch "\.(js|wasm|css|html|json|txt)\.gz$">
+    RemoveType .gz
+    AddEncoding gzip .gz
+    <IfModule mod_mime.c>
+      # Get MIME type from original file extension
+      ForceType application/octet-stream
+    </IfModule>
+  </FilesMatch>
+  
+  <FilesMatch "\.js\.gz$">
+    ForceType application/javascript
+  </FilesMatch>
+  
+  <FilesMatch "\.wasm\.gz$">
+    ForceType application/wasm
+  </FilesMatch>
+  
+  <FilesMatch "\.html\.gz$">
+    ForceType text/html
+  </FilesMatch>
+  
+  <FilesMatch "\.css\.gz$">
+    ForceType text/css
+  </FilesMatch>
+  
+  <FilesMatch "\.json\.gz$">
+    ForceType application/json
+  </FilesMatch>
+  
+  # Same for Brotli
+  <FilesMatch "\.(js|wasm|css|html|json|txt)\.br$">
+    RemoveType .br
+    AddEncoding br .br
+  </FilesMatch>
+  
+  <FilesMatch "\.js\.br$">
+    ForceType application/javascript
+  </FilesMatch>
+  
+  <FilesMatch "\.wasm\.br$">
+    ForceType application/wasm
+  </FilesMatch>
+  
+  <FilesMatch "\.html\.br$">
+    ForceType text/html
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
-  # Serve gzipped and brotli versions if they exist
-  RewriteCond %{HTTP:Accept-Encoding} gzip
-  RewriteCond %{REQUEST_FILENAME}.gz -f
-  RewriteRule ^(.*)$ $1.gz [QSA]
-  
-  RewriteCond %{HTTP:Accept-Encoding} br
-  RewriteCond %{REQUEST_FILENAME}.br -f
-  RewriteRule ^(.*)$ $1.br [QSA]
   
   # Don't rewrite existing files or directories
   RewriteRule ^index\.html$ - [L]
@@ -20,8 +66,9 @@
   RewriteRule . /index.html [L]
 </IfModule>
 
+# Enable compression for text-based files
 <IfModule mod_deflate.c>
-  AddType application/wasm .wasm
-  AddEncoding gzip .gz
-  AddEncoding br .br
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/json
+  AddOutputFilterByType DEFLATE application/wasm
 </IfModule>

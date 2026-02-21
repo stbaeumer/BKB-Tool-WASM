@@ -2,22 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run restart.sh (default)",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "bash",
-      "runtimeArgs": [
-        "${workspaceFolder}/restart.sh"
-      ],
-      "console": "integratedTerminal",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true
-      }
-    },
-    {
-      "name": "Run ConsoleApp",
+      "name": "Konsole",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-console",
@@ -29,73 +14,47 @@
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "focus": false
+        "focus": true
       }
-    }
-    ,
+    },
+    {
+      "name": "Webserver",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "dotnet publish -c Release -o dist && python3 -m http.server 5000 --directory dist/wwwroot"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "kill-and-clean",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true
+      }
+    },
     {
       "name": "Attach: ConsoleApp process",
       "type": "coreclr",
       "request": "attach",
       "processId": "${command:pickProcess}",
       "justMyCode": true
-    },
+    }
+  ],
+  "compounds": [
     {
-      "name": "Launch with restart.sh",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "kill-and-clean",
-      "program": "${workspaceFolder}/bin/Debug/net9.0/BKBToolClient.dll",
-      "args": [],
-      "cwd": "${workspaceFolder}",
-      "stopAtEntry": false,
-      "serverReadyAction": {
-        "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
-      },
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:5000"
-      },
-      "sourceFileMap": {
-        "/Views": "${workspaceFolder}/Views"
-      }
-    },
-    {
-      "name": "Run Dev Server (coreclr)",
-      "type": "coreclr",
-      "request": "launch",
-      "preLaunchTask": "build-wasm",
-      "program": "dotnet",
-      "args": [
-        "run",
-        "--configuration",
-        "Debug"
+      "name": "Beides (Konsole + Webserver)",
+      "configurations": [
+        "Webserver",
+        "Konsole"
       ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "env": {
-        "ASPNETCORE_URLS": "http://127.0.0.1:5005"
-      },
-      "serverReadyAction": {
-        "pattern": "App url:\\s+http://127\\.0\\.0\\.1:(\\d+)/",
-        "uriFormat": "http://127.0.0.1:%s/",
-        "action": "openExternally"
-      },
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": false
       }
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Run Web + Console",
-      "configurations": [
-        "Run Dev Server (coreclr)",
-        "Run ConsoleApp"
-      ]
     }
   ]
 }
