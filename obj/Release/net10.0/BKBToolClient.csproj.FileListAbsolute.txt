@@ -1107,11 +1107,9 @@
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.native.69poregybn.js
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.native.2mv1pqdd2n.wasm
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.runtime.q5rqv3xrhm.js
-/workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/BKBToolClient.1qf0aacmpg.wasm
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.native.69poregybn.js.gz
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.native.2mv1pqdd2n.wasm.gz
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/dotnet.runtime.q5rqv3xrhm.js.gz
-/workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/BKBToolClient.1qf0aacmpg.wasm.gz
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/workloads.json
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/dotnet.native.js
 /workspaces/BKB-Tool-WASM/bin/Release/net10.0/dotnet.native.wasm
@@ -1143,5 +1141,7 @@
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/jfpy7nmz59-{0}-2mv1pqdd2n-2mv1pqdd2n.gz
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/gmq0nxysc2-{0}-q5rqv3xrhm-q5rqv3xrhm.gz
 /workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/cf6n3recdb-{0}-5kqprya74h-5kqprya74h.gz
-/workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/j00ti7kaa9-{0}-1qf0aacmpg-1qf0aacmpg.gz
-/workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/kyvmjz7s0i-{0}-m9m0ubtx9l-m9m0ubtx9l.gz
+/workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/BKBToolClient.nkyxojcgp7.wasm
+/workspaces/BKB-Tool-WASM/bin/Release/net10.0/wwwroot/_framework/BKBToolClient.nkyxojcgp7.wasm.gz
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/j00ti7kaa9-{0}-nkyxojcgp7-nkyxojcgp7.gz
+/workspaces/BKB-Tool-WASM/obj/Release/net10.0/compressed/kyvmjz7s0i-{0}-0epddzgm2k-0epddzgm2k.gz

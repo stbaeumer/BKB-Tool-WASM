@@ -5,7 +5,7 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
   "mainAssemblyName": "BKBToolClient",
   "applicationEnvironment": "Development",
   "resources": {
-    "hash": "sha256-8Pxs7AeDKb4qqf6C7BOeGdZk+ebAqFS+4AE0kQFRng4=",
+    "hash": "sha256-AsWEWiJo6LMi6uA4v77Vqfnk0QwT3kbgUXiNNYQhb60=",
     "jsModuleNative": [
       {
         "name": "dotnet.native.69poregybn.js"
@@ -1242,8 +1242,8 @@ var e=!1;const t=async()=>WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,
       },
       {
         "virtualPath": "BKBToolClient.wasm",
-        "name": "BKBToolClient.1qf0aacmpg.wasm",
-        "integrity": "sha256-Z75N4xKObCS/F+kCmH/8CwvuqdDEZJ0nJl2SA0GwbAE=",
+        "name": "BKBToolClient.nkyxojcgp7.wasm",
+        "integrity": "sha256-uc6okZSUBeWppfmUstLg4zGoPCsxiCbbsE0D2hH0JpE=",
         "cache": "force-cache"
       }
     ]

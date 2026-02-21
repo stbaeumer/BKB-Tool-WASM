@@ -30,8 +30,8 @@
         {
           "key": "mailDomain",
           "label": "Mail-Domain",
-          "placeholder": "@students.berufskolleg-borken.dede",
-          "defaultValue": "@students.berufskolleg-borken.dede",
+          "placeholder": "@students.berufskolleg-borken.de",
+          "defaultValue": "@students.berufskolleg-borken.de",
           "validationRegex": "^@?[^\\s@]+\\.[^\\s@]+$",
           "validationErrorMessage": "Bitte eine gültige Domain angeben (z. B. @students.berufskolleg-borken.dede)",
           "isRequired": true
@@ -90,8 +90,7 @@
           "delimiter": "\t",
           "encoding": "utf-8",
           "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
-        }
-        ,
+        },
         {
           "name": "SchuelerZusatzdaten",
           "allowedExtensions": [".dat"],
@@ -101,8 +100,7 @@
           "delimiter": "\t",
           "encoding": "utf-8",
           "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
-        }
-        ,
+        },
         {
           "name": "SchuelerAdressen",
           "allowedExtensions": [".dat"],
@@ -127,7 +125,9 @@
       "optionalFiles": [],
       "inputFields": [],
       "processingSteps": [
-        { "functionName": "webuntis-export", "description": "Erzeuge Webuntis/Geevoo/Littera Exporte" }
+        { "functionName": "LoadInputs", "description": "Eingabedateien einlesen" },
+        { "functionName": "BuildExports", "description": "Schüler, Betriebe und Erzieher zusammenstellen" },
+        { "functionName": "WriteOutput", "description": "Exportdateien erzeugen" }
       ],
       "submitButtonLabel": "Exporte erzeugen",
       "successMessage": "Exportdateien wurden erzeugt und im Downloads-Ordner abgelegt.",
@@ -146,14 +146,200 @@
         "/testfiles/webuntis/Fall_2_Student_Samp_als_neuer_Schueler_erkannt.csv",
         "/testfiles/webuntis/Fall_2_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_2_SchuelerZusatzdaten.dat",
-        "/testfiles/webuntis/Fall_3_Student_Böhm_2_Bildungsgaenge_späterer_Bildungsgangbeginn_gewinnt.csv",
+        "/testfiles/webuntis/Fall_3_Student_Böhm_hat_2_Zeilen_es_gewinnt_MM25A_mit_spätestem_Bildungsgangbeginn.csv",
         "/testfiles/webuntis/Fall_3_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_3_SchuelerZusatzdaten.dat",
         "/testfiles/webuntis/Fall_4_Student_Samp_als_zu_löschender_SuS_Austrittsdatum_gesetzt.csv",
         "/testfiles/webuntis/Fall_4_SchuelerBasisdaten.dat",
         "/testfiles/webuntis/Fall_4_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_5_SchuelerBasisdaten.dat",
+        "/testfiles/webuntis/Fall_5_SchuelerZusatzdaten.dat",
+        "/testfiles/webuntis/Fall_5_Student_Böhm_Neue_Klasse_HT25A.csv",
         "/testfiles/webuntis/SchuelerErzieher.dat",
         "/testfiles/webuntis/SchuelerAdressen.dat"
+      ]
+    },
+    {
+      "id": "Kurse",
+      "name": "Kurse",
+      "description": "Generiert Kurslisten und Schülerzuordnungen aus kurse.dat, GPU002.txt und studentgroupstudents.csv.",
+      "functionHint": "Verwendet SchILD-Kursdateien (kurse.dat), GPU002.txt sowie die WebUntis-Gruppenzuordnungen (studentgroupstudents.csv). Schüler werden über Namen aus den Basis-/Zusatzdaten gematcht. Falls Gruppenbezeichnungen nicht eindeutig sind, können Nachbearbeitungen nötig sein.",
+      "requiredFiles": [
+        {
+          "name": "Kurse",
+          "allowedExtensions": [".dat"],
+          "fileKey": "Kurse",
+          "hasHeader": true,
+          "delimiter": "|",
+          "encoding": "utf-8",
+          "sourceHint": "SchILD-NRW Kursdatei (kurse.dat) aus dem Export."
+        },
+        {
+          "name": "GPU002",
+          "allowedExtensions": [".txt"],
+          "fileKey": "gpu002",
+          "hasHeader": false,
+          "delimiter": "|",
+          "encoding": "utf-8",
+          "sourceHint": "SchILD-NRW GPU002.txt (ohne Kopfzeile)."
+        },
+        {
+          "name": "SchuelerBasisdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "basisdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        },
+        {
+          "name": "SchuelerZusatzdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "zusatzdaten",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "1. Alle Schüler (aktive, externe) auswählen\n2. Datenaustausch > Schnittstelle Schild-NRW > Export"
+        },
+        {
+          "name": "studentgroupstudents",
+          "allowedExtensions": [".csv"],
+          "fileKey": "studentgroupstudents",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Webuntis -> Administration -> Export: studentgroupstudents.csv"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [
+        {
+          "name": "Abschnitt",
+          "key": "abschnitt",
+          "type": "select",
+          "required": true,
+          "options": [
+            { "value": "1", "label": "1. Abschnitt" },
+            { "value": "2", "label": "2. Abschnitt" },
+            { "value": "3", "label": "3. Abschnitt" },
+            { "value": "4", "label": "4. Abschnitt" }
+          ],
+          "hint": "Schulischer Abschnitt (1-4)",
+          "instructions": "2. Einstellungen vornehmen"
+        }
+      ],
+      "processingSteps": [
+        { "functionName": "LoadInputs", "description": "Eingabedateien einlesen" },
+        { "functionName": "BuildCourses", "description": "Kurslisten und Zuordnungen erstellen" },
+        { "functionName": "WriteOutput", "description": "Exportdateien erzeugen" }
+      ],
+      "submitButtonLabel": "Kurse generieren",
+      "successMessage": "Kurse wurden erstellt.",
+      "outputFiles": [
+        { "fileKey": "kurse_export", "fileName": "Kurse.dat", "hint": "Neue Kurse.dat zum Import in SchILD-NRW" },
+        { "fileKey": "kurse_studentzuordnungen", "fileName": "Kurse_Studentzuordnungen.csv", "hint": "Zuordnung Schüler -> Kurs/Gruppe (aus studentgroupstudents.csv)" },
+        { "fileKey": "kurse_gpu002", "fileName": "GPU002_Parsed.csv", "hint": "GPU002.txt als CSV zur Kontrolle" }
+      ],
+      "testFiles": [
+        "/testfiles/kurse/Fall_1_Kurse_ein_kursleiter.dat",
+        "/testfiles/kurse/Fall_1_GPU002.txt",
+        "/testfiles/kurse/Fall_1_SchuelerBasisdaten.dat",
+        "/testfiles/kurse/Fall_1_SchuelerZusatzdaten.dat",
+        "/testfiles/kurse/Fall_1_StudentgroupStudents.csv",
+        "/testfiles/kurse/Fall_2_Kurse_mehrere_Untisunterrichte.dat",
+        "/testfiles/kurse/Fall_2_GPU002.txt",
+        "/testfiles/kurse/Fall_2_SchuelerBasisdaten.dat",
+        "/testfiles/kurse/Fall_2_SchuelerZusatzdaten.dat",
+        "/testfiles/kurse/Fall_2_StudentgroupStudents.csv"
+      ]
+    },
+    {
+      "id": "lernabschnittsdaten",
+      "name": "Lernabschnittsdaten",
+      "description": "Ergänzt Fehlstundendaten in den Lernabschnittsdaten basierend auf der Absence-Liste von Webuntis.",
+      "functionHint": "Die Fehlstunden werden aus der AbsencePerStudent_*.csv extrahiert und in die SchuelerLernabschnittsdaten.dat eingetragen. Die Felder 'SummeFehlstd' und 'SummeFehlstd_unentschuldigt' werden zunächst auf 0 gesetzt.",
+      "requiredFiles": [
+        {
+          "name": "SchuelerLernabschnittsdaten",
+          "allowedExtensions": [".dat"],
+          "fileKey": "lernabschnittsdaten",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?SchuelerLernabschnittsdaten.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Lernabschnittsdaten aus SchILD-NRW Export"
+        },
+        {
+          "name": "AbsencePerStudent",
+          "allowedExtensions": [".csv"],
+          "fileKey": "absence",
+          "fileNameRegex": "^(?:Fall[0-9]+_)?AbsencePerStudent_.*",
+          "hasHeader": true,
+          "delimiter": "\t",
+          "encoding": "utf-8",
+          "sourceHint": "Webuntis -> Administration -> Export Absenzen als AbsencePerStudent_*.csv"
+        }
+      ],
+      "optionalFiles": [],
+      "inputFields": [
+        {
+          "key": "abschnitt",
+          "label": "Abschnitt",
+          "placeholder": "1",
+          "defaultValue": "1",
+          "validationRegex": "^[1-4]$",
+          "validationErrorMessage": "Bitte einen Wert zwischen 1 und 4 angeben",
+          "isRequired": true
+        },
+        {
+          "key": "konferenzdatum",
+          "label": "Konferenzdatum",
+          "placeholder": "dd.mm.yyyy",
+          "defaultValue": "",
+          "validationRegex": "^\\d{2}\\.\\d{2}\\.\\d{4}$",
+          "validationErrorMessage": "Bitte das Datum im Format dd.mm.yyyy angeben",
+          "isRequired": true
+        },
+        {
+          "key": "zeugnisdatum",
+          "label": "Zeugnisdatum",
+          "placeholder": "dd.mm.yyyy",
+          "defaultValue": "",
+          "validationRegex": "^\\d{2}\\.\\d{2}\\.\\d{4}$",
+          "validationErrorMessage": "Bitte das Datum im Format dd.mm.yyyy angeben",
+          "isRequired": true
+        },
+        {
+          "key": "maximaleFehlstundenProTag",
+          "label": "Maximale Fehlstunden pro Tag",
+          "placeholder": "6",
+          "defaultValue": "6",
+          "validationRegex": "^[0-9]+$",
+          "validationErrorMessage": "Bitte eine positive Ganzzahl angeben",
+          "isRequired": true
+        },
+        {
+          "key": "fehlzeitenWaehrendDerLetztenTagBleibenUnberuecksichtigt",
+          "label": "Fehlzeiten während der letzten x Tage bleiben unberücksichtigt",
+          "placeholder": "0",
+          "defaultValue": "0",
+          "validationRegex": "^[0-9]+$",
+          "validationErrorMessage": "Bitte eine positive Ganzzahl angeben",
+          "isRequired": true
+        }
+      ],
+      "processingSteps": [
+        { "functionName": "ProcessLernabschnittsdaten", "description": "Fehlstundendaten verarbeiten und eintragen" },
+        { "functionName": "WriteOutput", "description": "Ausgabedateien erzeugen" }
+      ],
+      "submitButtonLabel": "Lernabschnittsdaten verarbeiten",
+      "successMessage": "Lernabschnittsdaten wurden verarbeitet und ergänzt.",
+      "outputFiles": [
+        { "fileKey": "lernabschnittsdaten_modified", "fileName": "SchuelerLernabschnittssdaten.dat", "hint": "Ergänzte Lernabschnittsdaten mit Fehlstunden" }
+      ],
+      "testFiles": [
+        "testfiles/lernabschnittsdaten/Fall_1_AbsencePerStudent_Fehlstunden_neu_erkannt.csv",
+        "testfiles/lernabschnittsdaten/Fall_1_SchuelerLernabschnittsdaten.dat"
       ]
     }
   ]

@@ -1,55 +1,116 @@
-# Prerequisites
-*.d
+# .NET / C# Build Results
+bin/
+obj/
+dist/
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.so
+*.dylib
+*.user
+*.userprefs
+*.sln.iml
+packages/
+NugetDebug/
+.vs/
+.vscode/
+*.VC.db
+*.VC.VC.opendb
+
+# Visual Studio cache/options directory
+.vs/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio cache directory
+.vs/
+
+# Files built by Visual Studio
+*.sln
+*.csproj
+*.vcxproj
+*.filters
+*.vcxproj.user
+
+# Test Results
+TestResults/
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Node modules (if using npm for frontend build)
+node_modules/
+package-lock.json
+
+# OS Files
+.DS_Store
+Thumbs.db
+.gitignore
+
+# Azure and cloud deployment files
+.cfignore
+.ignore
+
+# Files from the preprocessor
+*.i
+*.ii
+*.gpu
 
 # Object files
 *.o
 *.ko
 *.obj
 *.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Libraries
-*.lib
+*.so.*
 *.a
+*.lib
 *.la
 *.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
 *.dylib
+*.su
+*.idb
+*.dSYM/
 
-# Executables
-*.exe
-*.out
+# Executable
 *.app
 *.i*86
 *.x86_64
-*.hex
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
+# Debug symbols
 *.pdb
+*.map
+*.ilk
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-# debug information files
-*.dwo
+# Prerequisites
+*.d
