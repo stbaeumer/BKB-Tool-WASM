@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BKBToolConsole")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+12511d8d5265c0c84044a79806e5d6dc10960b98")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+98de9ae6c030a7fc8d9c76b0cdabe7f7b343c97f")]
 [assembly: System.Reflection.AssemblyProductAttribute("BKBToolConsole")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BKBToolConsole")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

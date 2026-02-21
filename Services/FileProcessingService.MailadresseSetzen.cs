@@ -20,7 +20,7 @@ public partial class FileProcessingService
 
             if (basis?.Content == null || zusatz?.Content == null)
             {
-                result.Message = "Beide Dateien (Basis- und Zusatzdaten) werden benötigt. Bitte stellen Sie sicher, dass insbesondere die Datei 'SchuelerZusatzdaten.dat' (Zusatzdaten) hochgeladen wurde, da diese die schulischen E-Mail-Adressen enthält.";
+                result.Message = "Beide Dateien (Basis- und Zusatzdaten) werden benÃ¶tigt. Bitte stellen Sie sicher, dass insbesondere die Datei 'SchuelerZusatzdaten.dat' (Zusatzdaten) hochgeladen wurde, da diese die schulischen E-Mail-Adressen enthÃ¤lt.";
                 return result;
             }
 
@@ -168,7 +168,7 @@ public partial class FileProcessingService
             if (duplicatesAcrossPersons.Any())
             {
                 var htmlSb = new StringBuilder();
-                htmlSb.AppendLine("<p><strong>Doppelte Einträge in Spalte 'schulische E-Mail' gefunden (bei unterschiedlichen Personen).</strong></p>");
+                htmlSb.AppendLine("<p><strong>Doppelte EintrÃ¤ge in Spalte 'schulische E-Mail' gefunden (bei unterschiedlichen Personen).</strong></p>");
                 htmlSb.AppendLine("<table class='table table-sm table-bordered'><thead><tr><th>E-Mail</th><th>Betroffene Zeilen</th></tr></thead><tbody>");
                 foreach (var kv in duplicatesAcrossPersons)
                 {
@@ -182,8 +182,8 @@ public partial class FileProcessingService
             bool allHaveEmail = Enumerable.Range(0, records.Count).All(i => records[i] is string[] a && a.Length > emailCol && !string.IsNullOrWhiteSpace(a[emailCol]));
             if (allHaveEmail)
             {
-                var nothingHtml = "<div class='alert alert-info'><strong>Keine Änderungen erforderlich</strong><br/>Alle Schüler besitzen bereits eine eindeutige schulische E-Mail-Adresse.</div>";
-                return new ProcessingResult { Success = true, Message = "Keine Änderungen erforderlich. Alle Schüler haben bereits eindeutige schulische E-Mail-Adressen.", MessageHtml = nothingHtml };
+                var nothingHtml = "<div class='alert alert-info'><strong>Keine Ã„nderungen erforderlich</strong><br/>Alle SchÃ¼ler besitzen bereits eine eindeutige schulische E-Mail-Adresse.</div>";
+                return new ProcessingResult { Success = true, Message = "Keine Ã„nderungen erforderlich. Alle SchÃ¼ler haben bereits eindeutige schulische E-Mail-Adressen.", MessageHtml = nothingHtml };
             }
 
             // generate new addresses by grouping identical persons (Vorname|Nachname|Geburtsdatum)
@@ -214,12 +214,12 @@ public partial class FileProcessingService
                 {
                     // conflict: different emails for same person
                     var htmlSb = new StringBuilder();
-                    htmlSb.AppendLine("<p><strong>Widersprüchliche E-Mail-Adressen für dieselbe Person gefunden.</strong></p>");
+                    htmlSb.AppendLine("<p><strong>WidersprÃ¼chliche E-Mail-Adressen fÃ¼r dieselbe Person gefunden.</strong></p>");
                     htmlSb.AppendLine("<table class='table table-sm table-bordered'><thead><tr><th>Person</th><th>Zeilen</th><th>Adressen</th></tr></thead><tbody>");
                     var rows = string.Join(", ", indices.Select(i => (i + 1).ToString()));
                     htmlSb.AppendLine($"<tr><td>{System.Net.WebUtility.HtmlEncode(kv.Key)}</td><td>{rows}</td><td>{System.Net.WebUtility.HtmlEncode(string.Join(", ", existingEmails))}</td></tr>");
                     htmlSb.AppendLine("</tbody></table>");
-                    return new ProcessingResult { Success = false, Message = "Widersprüchliche E-Mail-Adressen für dieselbe Person gefunden.", MessageHtml = htmlSb.ToString() };
+                    return new ProcessingResult { Success = false, Message = "Widersprchliche E-Mail-Adressen fÃ¼r dieselbe Person gefunden.", MessageHtml = htmlSb.ToString() };
                 }
 
                 string? adoptedEmail = existingEmails.FirstOrDefault();
@@ -359,7 +359,7 @@ public partial class FileProcessingService
                 {
                     // The exported file must be named exactly 'SchuelerZusatzdaten.dat'
                     var outFileName = "SchuelerZusatzdaten.dat";
-                    var outHint = $"{newAddresses.Count} neue Adressen ergänzt (Spalte: {(headers != null ? headers[emailCol] : emailCol.ToString())})";
+                    var outHint = $"{newAddresses.Count} neue Adressen ergÃ¤nzt (Spalte: {(headers != null ? headers[emailCol] : emailCol.ToString())})";
                     var outProcessingHint = "Datei kann in SchILD-NRW importiert werden. Vorher Backup anlegen.";
 
                     if (config != null)
@@ -398,7 +398,7 @@ public partial class FileProcessingService
                         {
                             var filtered = FilterOnlyChangedRows(zusatz.Content, modified, delimiter, quote, zusatz.Encoding, zusatz.HasHeader);
                             modified = filtered;
-                            outHint += " (nur neue/veränderte Zeilen enthalten)";
+                            outHint += " (nur neue/verÃ¤nderte Zeilen enthalten)";
                         }
                         catch { }
                     }
@@ -419,9 +419,9 @@ public partial class FileProcessingService
                 var msgHtml = new StringBuilder();
                 if (newAddresses.Any())
                 {
-                    msg.AppendLine($"{newAddresses.Count} Mailadressen wurden generiert und in den Zusatzdaten ergänzt.");
+                    msg.AppendLine($"{newAddresses.Count} Mailadressen wurden generiert und in den Zusatzdaten ergÃ¤nzt.");
                     msgHtml.AppendLine("<p><strong>Generierte Mailadressen:</strong></p>");
-                    msgHtml.AppendLine("<table class='table table-sm table-striped'><thead><tr><th>Schüler</th><th>Neue E-Mail</th></tr></thead><tbody>");
+                    msgHtml.AppendLine("<table class='table table-sm table-striped'><thead><tr><th>SchÃ¼ler</th><th>Neue E-Mail</th></tr></thead><tbody>");
                     foreach (var na in newAddresses)
                     {
                         msg.AppendLine($" - {na.Name}: {na.NewEmail}");
@@ -434,8 +434,8 @@ public partial class FileProcessingService
                 if (conflicts.Any())
                 {
                     msg.AppendLine();
-                    msg.AppendLine("Nicht automatisch ergänzt aufgrund von Konflikten / fehlenden Angaben:");
-                    msgHtml.AppendLine("<p><strong>Nicht ergänzt (Konflikte / fehlende Angaben):</strong></p>");
+                    msg.AppendLine("Nicht automatisch ergÃ¤nzt aufgrund von Konflikten / fehlenden Angaben:");
+                    msgHtml.AppendLine("<p><strong>Nicht ergÃ¤nzt (Konflikte / fehlende Angaben):</strong></p>");
                     msgHtml.AppendLine("<table class='table table-sm table-bordered'><thead><tr><th>Zeile</th><th>Grund / Versuchte Adresse</th></tr></thead><tbody>");
                     foreach (var c in conflicts)
                     {
@@ -444,7 +444,7 @@ public partial class FileProcessingService
                         msgHtml.AppendLine($"<tr><td>{c.RowIdx + 1}</td><td>{System.Net.WebUtility.HtmlEncode(tried)}</td></tr>");
                     }
                     msgHtml.AppendLine("</tbody></table>");
-                    msgHtml.AppendLine("<p>Bitte setzen Sie diese Einträge manuell in SchILD, anschließend Verarbeitung erneut starten.</p>");
+                    msgHtml.AppendLine("<p>Bitte setzen Sie diese EintrÃ¤ge manuell in SchILD, anschlieÃŸend Verarbeitung erneut starten.</p>");
                 }
 
                 result.Message = msg.ToString();

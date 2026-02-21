@@ -1,0 +1,51 @@
+@page "/funktion/{Id}"
+@using BKBToolClient.Models
+@using BKBToolClient.Services
+@inject FunctionConfigService ConfigService
+@inject NavigationManager Nav
+
+<PageTitle>BKB-Tool</PageTitle>
+
+<div class="container mt-4">
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Lade Funktion...</span>
+            </div>
+        </div>
+    }
+    else if (_config == null)
+    {
+        <div class="alert alert-danger">Unbekannte Funktion-ID: @Id</div>
+        <button class="btn btn-outline-secondary" @onclick="GoHome">← Zuruck</button>
+    }
+    else
+    {
+        <div class="mt-4">
+            <FunctionProcessor Config="_config" OnBack="GoHome" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+
+    private bool _isLoading = true;
+    private FunctionConfig? _config;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _isLoading = true;
+        _config = null;
+
+        var functions = await ConfigService.LoadFunctionsAsync();
+        _config = functions.FirstOrDefault(f => string.Equals(f.Id, Id, StringComparison.OrdinalIgnoreCase));
+        _isLoading = false;
+    }
+
+    private void GoHome()
+    {
+        try { Nav.NavigateTo("/"); } catch { }
+    }
+}
